@@ -71,7 +71,7 @@ Este es el principio más importante del proyecto. Una fuga de datos entre empre
 - Solo se escribe código que corresponda a una tarea de `tasks.md`. Nada "de paso", nada "ya que estaba".
 - Un endpoint, campo, pantalla o modelo que no esté en `spec.md` no se crea. Si falta, se detiene el trabajo y se corrige la spec primero.
 - Antes de crear un helper, schema o componente, se busca uno equivalente. Crear un duplicado exige decir por qué en el commit.
-- Si una feature necesita más de 20 tareas, se parte en dos specs.
+- Si una feature necesita más de 15 tareas por fase (backend/frontend), se parte en dos specs.
 
 ---
 
@@ -120,4 +120,5 @@ No corrijas nada todavía, solo lista.
 
 | Fecha | Cambio | Motivo |
 | --- | --- | --- |
+| 2026-09-18 | Límite de 15 tareas por fase, no global | Permitir features backend + frontend completos sin partir innecesariamente; primera aplicación en 001-cimientos-y-auth (10 backend + 10 frontend) |
 | 2026-09-18 | Versión inicial | — |
