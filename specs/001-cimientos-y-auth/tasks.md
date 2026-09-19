@@ -32,7 +32,7 @@
 - [x] **T004** `[P]` `core/security.py`: hash y verificación Argon2id, y la función de normalización NFKC + `lower` + colapso de espacios, compartida por búsqueda e inserción, y usada tanto para nombres de empresa como de usuario.
       · Verificación: `pytest tests/unit/test_security.py` — una contraseña de 200 caracteres hashea y verifica; `"  Acme   S.A. "` y `"acme s.a."` normalizan igual; un test mide que la verificación tarda menos de 400 ms.
 
-- [ ] **T005** `[P]` `core/security.py`: generación de token de sesión de 32 bytes, su SHA-256, y firma y verificación con `itsdangerous`.
+- [x] **T005** `[P]` `core/security.py`: generación de token de sesión de 32 bytes, su SHA-256, y firma y verificación con `itsdangerous`.
       · Verificación: `pytest tests/unit/test_tokens.py` — una firma manipulada se rechaza; dos tokens generados nunca coinciden; el hash es determinista.
 
 - [ ] **T006** `[P]` `core/csrf.py`: emisión de la cookie `csrf_token` y verificación double-submit.
