@@ -171,6 +171,13 @@ Todas las rutas bajo `/api/v1`. Formato de error único:
 { "error": { "code": "INVALID_CREDENTIALS", "message": "...", "fields": {} } }
 ```
 
+Errores comunes a cualquier endpoint (añadidos en T008, 2026-09-19):
+
+| Código | Cuándo | Cuerpo |
+| --- | --- | --- |
+| 403 | operación que modifica estado sin token CSRF válido | `code: CSRF_FAILED` |
+| 404 | recurso inexistente **o de otra empresa**, indistinguibles (RN-9) | `code: NOT_FOUND`, mensaje siempre idéntico |
+
 ### `POST /api/v1/auth/register`
 
 ```json
@@ -182,6 +189,7 @@ Todas las rutas bajo `/api/v1`. Formato de error único:
 | 201 | creado, sesión iniciada | `{ "user": {...}, "company": {...} }` + cookies `session` y `csrf_token` |
 | 400 | campo vacío o contraseña inválida | `code: VALIDATION_ERROR`, `fields` con el detalle por campo |
 | 409 | nombre de empresa ya en uso | `code: COMPANY_NAME_TAKEN` |
+| 409 | nombre de usuario ya en uso en todo el sistema (RN-3; añadido en T008) | `code: USERNAME_TAKEN` |
 
 ### `POST /api/v1/auth/login`
 
