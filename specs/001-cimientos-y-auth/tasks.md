@@ -51,7 +51,7 @@
 - [ ] **T009** `services/auth.register`: normaliza, crea empresa y usuario en una transacción, traduce `IntegrityError` a `DuplicateCompanyError`.
       · Verificación: `pytest tests/integration/test_register.py` — cubre CA-1.1 a CA-1.4 y los casos borde de mayúsculas y espacios. Un test lanza dos registros concurrentes con el mismo nombre y comprueba que uno recibe `DuplicateCompanyError` y el otro éxito, nunca un error interno.
 
-- [ ] **T010** Validador de contraseña de RN-4 (D-5): mínimo 12 caracteres; al menos una mayúscula, una minúscula, un número y un especial de `#$%&*_@`; ningún otro carácter.
+- [x] **T010** Validador de contraseña de RN-4 (D-5): mínimo 12 caracteres; al menos una mayúscula, una minúscula, un número y un especial de `#$%&*_@`; ningún otro carácter.
       · Verificación: `pytest tests/unit/test_password_policy.py` — 11 caracteres válidos falla y 12 pasa; falla si falta mayúscula, minúscula, número o especial, indicando qué requisito incumple; falla con un espacio (también al inicio o al final), con `ñ` o letra acentuada, y con un símbolo fuera de la lista; una de 200 caracteres válidos pasa.
 
 - [ ] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
