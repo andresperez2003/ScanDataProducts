@@ -49,10 +49,14 @@ def check_password(password: str) -> list[PasswordRequirement]:
     return [requisito for falla, requisito in incumplidos if falla]
 
 
+def password_error(password: str) -> str | None:
+    """Texto con cada requisito incumplido, o None si la contraseña es válida."""
+    incumplidos = check_password(password)
+    return " ".join(r.message for r in incumplidos) if incumplidos else None
+
+
 def validate_password(password: str) -> None:
     """Lanza DomainValidationError con cada requisito incumplido en `password`."""
-    incumplidos = check_password(password)
-    if incumplidos:
-        raise DomainValidationError(
-            {"password": " ".join(r.message for r in incumplidos)}
-        )
+    error = password_error(password)
+    if error is not None:
+        raise DomainValidationError({"password": error})

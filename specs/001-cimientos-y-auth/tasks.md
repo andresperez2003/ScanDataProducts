@@ -48,7 +48,7 @@
 - [x] **T008** Errores de dominio en `core/errors.py` y su mapeo único a códigos HTTP.
       · Verificación: `pytest tests/unit/test_errors.py` — toda excepción de dominio tiene mapeo; un test recorre las subclases y falla si alguna no está en la tabla. Ningún módulo de `services/` importa `fastapi`: test que inspecciona los imports.
 
-- [ ] **T009** `services/auth.register`: normaliza, crea empresa y usuario en una transacción, traduce `IntegrityError` a `DuplicateCompanyError`.
+- [x] **T009** `services/auth.register`: normaliza, crea empresa y usuario en una transacción, traduce `IntegrityError` a `DuplicateCompanyError`.
       · Verificación: `pytest tests/integration/test_register.py` — cubre CA-1.1 a CA-1.4 y los casos borde de mayúsculas y espacios. Un test lanza dos registros concurrentes con el mismo nombre y comprueba que uno recibe `DuplicateCompanyError` y el otro éxito, nunca un error interno.
 
 - [x] **T010** Validador de contraseña de RN-4 (D-5): mínimo 12 caracteres; al menos una mayúscula, una minúscula, un número y un especial de `#$%&*_@`; ningún otro carácter.
