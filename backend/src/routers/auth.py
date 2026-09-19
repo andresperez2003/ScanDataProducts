@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.config import Settings, get_settings
@@ -79,7 +79,6 @@ async def register(
 @router.post("/login")
 async def login(
     body: LoginRequest,
-    request: Request,
     response: Response,
     db: Db,
     settings: CurrentSettings,
@@ -88,7 +87,6 @@ async def login(
         db,
         username=body.username,
         password=body.password,
-        client_ip=request.client.host if request.client else "0.0.0.0",
         now=datetime.now(UTC),
     )
     _set_auth_cookies(response, result.session_token, settings)

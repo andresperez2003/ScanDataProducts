@@ -20,7 +20,6 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 | Firma de cookie | `itsdangerous` | Firma HMAC de la cookie de sesión, sin almacenar el secreto en el cliente | JWT: estado en el cliente, revocación imposible sin lista negra — incompatible con CA-3.2 |
 | Sesión | Tabla en BD, token opaco de 32 bytes, guardado como SHA-256 | Revocable al instante (CA-3.2, RN-7) y un volcado de BD no permite suplantar sesiones | Sesión en cookie firmada sin estado: no se puede revocar |
 | CSRF | Double-submit cookie | Sin estado en servidor, encaja con SPA en otro origen | Token en sesión: obliga a una consulta extra por petición |
-| Rate limiting | Tabla `login_attempts` con ventana deslizante | Sin infraestructura extra; suficiente al volumen previsto | Redis: una pieza más que operar antes de tener usuarios |
 | Frontend | React 18 + Vite + TypeScript | Decidido por el usuario | — |
 | Datos en frontend | TanStack Query | El estado de servidor se gestiona en una capa, no con `useEffect` (constitución, convenciones de frontend) | `useEffect` a mano: prohibido por la constitución |
 | Tests | pytest + httpx.ASGITransport | Tests de integración contra la app real y Postgres real | TestClient síncrono: no ejercita el camino async |
@@ -45,14 +44,13 @@ backend/
 │  │  ├─ deps.py            # get_auth_context (único origen de company_id)
 │  │  └─ logging.py         # structlog con request_id y company_id
 │  ├─ models/
-│  │  ├─ company.py  user.py  session.py  login_attempt.py
+│  │  ├─ company.py  user.py  session.py
 │  │  └─ schemas/
 │  │     └─ auth.py         # request/response de §5
 │  ├─ repos/
 │  │  ├─ company.py
 │  │  ├─ user.py            # get_by_username (global, sin company_id: ver nota más abajo)
-│  │  ├─ session.py
-│  │  └─ login_attempt.py
+│  │  └─ session.py
 │  ├─ services/
 │  │  └─ auth.py            # register, login, logout, revoke
 │  └─ routers/
@@ -64,7 +62,7 @@ backend/
    │  ├─ test_csrf.py  test_errors.py  test_password_policy.py
    └─ integration/
       ├─ test_db_fixture.py  test_schema.py  test_repos.py  test_register.py
-      ├─ test_login.py  test_rate_limit.py  test_session.py
+      ├─ test_login.py  test_session.py
       ├─ test_auth_api.py  test_logging.py  test_isolation.py
 
 frontend/src/
@@ -128,19 +126,9 @@ frontend/src/
 
 Índice parcial `WHERE revoked_at IS NULL` sobre `token_hash` para la búsqueda de cada petición. El token en claro nunca se almacena: un volcado de BD no permite suplantar sesiones.
 
-### `login_attempts`
+### `login_attempts` (retirada)
 
-| Campo | Tipo | Nulo | Restricción |
-| --- | --- | --- | --- |
-| id | UUID | no | PK |
-| username_normalized | text | no | se registra aunque el usuario no exista |
-| client_ip | inet | no | |
-| succeeded | boolean | no | |
-| attempted_at | timestamptz | no | índice |
-
-Dos índices compuestos: `(username_normalized, attempted_at)` para CA-2.5 y `(client_ip, attempted_at)` para CA-2.6. Ya no lleva `company_normalized`: como el login no pide empresa, no hay nada que registrar ahí.
-
-**Implementación futura (fuera de esta feature):** un trabajo de limpieza que borre las filas de más de 30 días. Será **la única tabla del sistema con borrado físico**, porque no es un dato de negocio; queda anotada como excepción explícita al principio 4 de la constitución. No afecta a ningún criterio de aceptación: las ventanas de CA-2.5 y CA-2.6 solo miran los últimos 15 minutos.
+La migración inicial la creó para el bloqueo por intentos, que quedó fuera de alcance (spec D-4, 2026-09-19). Como una migración aplicada no se edita, **se elimina con una migración nueva** (T012b).
 
 ### `probe_items` (temporal, T016)
 
@@ -161,7 +149,7 @@ Endpoints (solo para tests): `GET /api/v1/_probe` (listar), `GET /api/v1/_probe/
 ### Notas de esquema
 
 - La FK circular `companies.disabled_by` ↔ `users.company_id` se declara `DEFERRABLE INITIALLY DEFERRED` para permitir crear empresa y primer usuario en la misma transacción (CA-1.1).
-- `login_attempts` y `sessions` no llevan `disabled_at`: no son entidades de negocio.
+- `sessions` no lleva `disabled_at`: no es entidad de negocio.
 
 ## 5. Contratos de API
 
@@ -203,7 +191,6 @@ Solo dos campos. **Sin `company_name`**: el usuario es único en todo el sistema
 | --- | --- | --- |
 | 200 | credenciales correctas, usuario activo | `{ "user": {...}, "company": {...} }` + cookies |
 | 401 | usuario inexistente, contraseña incorrecta o usuario deshabilitado | `code: INVALID_CREDENTIALS`, siempre el mismo mensaje (RN-6, CA-2.2/2.3/2.4) |
-| 429 | límite por usuario o por IP excedido | `code: TOO_MANY_ATTEMPTS`, cabecera `Retry-After` |
 
 **Tiempo constante (CA-2.3).** Si el usuario no existe, el servicio **igualmente verifica la contraseña contra un hash señuelo** fijo, generado al arrancar. Sin esto, la diferencia de tiempo de respuesta revela qué usuarios existen y CA-2.3 falla aunque el mensaje sea idéntico.
 
@@ -246,7 +233,6 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 | CA-1.6 | filtro de structlog que redacta claves `password` |
 | CA-2.1 | `auth.login` → creación de sesión |
 | CA-2.2, CA-2.3, CA-2.4 | rama única de fallo + hash señuelo, búsqueda de usuario global |
-| CA-2.5, CA-2.6 | `login_attempts` con dos ventanas deslizantes |
 | CA-3.1 | cookie persistente + `GET /auth/me` |
 | CA-3.2 | `revoked_at` + índice parcial |
 | CA-3.3 | `last_seen_at` (inactividad de 8h) |
@@ -261,7 +247,6 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 | --- | --- | --- |
 | Argon2id mal calibrado supera el presupuesto de 1 s | Login lento, §7 incumplido | T004 mide y ajusta; test que falla si la verificación supera 400 ms |
 | Se olvida el hash señuelo | CA-2.3 pasa por mensaje pero falla por tiempo | Test explícito que compara tiempos de usuario existente e inexistente |
-| Rate limiting en BD no escala | Latencia en login bajo carga | Aceptado a este volumen; migrar a Redis cuando el p95 de login supere 1 s |
 | `--autogenerate` no detecta índices parciales ni la FK diferida | Migración incompleta | Revisión manual obligatoria del archivo generado (T003) |
 | Normalización Unicode inconsistente | Dos empresas "iguales" coexisten | Normalizar con NFKC antes de `lower()`, en una única función compartida |
 | CSRF mal implementado con SPA en otro origen | Peticiones rechazadas o protección inútil | Test de integración que envía sin cabecera y espera 403 |
@@ -273,4 +258,4 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 - [x] Cada criterio de aceptación aparece en la tabla de trazabilidad
 - [x] Los códigos de error están decididos, no implícitos
 - [x] Nada contradice la spec
-- [x] La excepción al principio 4 (borrado en `login_attempts`) está declarada explícitamente, como implementación futura
+- [x] Sin bloqueo por intentos fallidos: fuera de alcance (spec D-4, retirada el 2026-09-19)

@@ -171,17 +171,19 @@ async def test_ca_2_2_ca_2_3_rn_6_401_identico_con_o_sin_usuario(
     assert "set-cookie" not in mala.headers
 
 
-async def test_ca_2_5_429_con_retry_after(make_client: ClientFactory) -> None:
+async def test_d_4_sin_bloqueo_ni_retry_after_tras_fallos_repetidos(
+    make_client: ClientFactory,
+) -> None:
     await _registrar(make_client())
     cliente = make_client()
-    for _ in range(5):
-        await _entrar(cliente, username="maria", password="Incorrecta#2026")
+    for _ in range(6):
+        fallo = await _entrar(cliente, username="maria", password="Incorrecta#2026")
+        assert fallo.status_code == 401
+        assert "Retry-After" not in fallo.headers
 
     respuesta = await _entrar(cliente, username="maria", password=_CONTRASENA)
 
-    assert respuesta.status_code == 429
-    assert _error(respuesta)["code"] == "TOO_MANY_ATTEMPTS"
-    assert 0 < int(respuesta.headers["Retry-After"]) <= 15 * 60
+    assert respuesta.status_code == 200
 
 
 async def test_login_sin_contrasena_400(client: AsyncClient) -> None:

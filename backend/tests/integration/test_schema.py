@@ -100,3 +100,18 @@ async def test_ca_1_5_sin_columna_de_texto_plano(db_session: AsyncSession) -> No
 
     assert "password_hash" in columnas
     assert {c for c in columnas if "pass" in c} == {"password_hash"}
+
+
+async def test_d_4_no_existe_tabla_de_intentos_de_login(
+    db_session: AsyncSession,
+) -> None:
+    # D-4 (retirada): sin bloqueo por intentos no se guarda historial de intentos.
+    filas = await _consultar(
+        db_session,
+        """
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'login_attempts'
+        """,
+    )
+
+    assert filas == []

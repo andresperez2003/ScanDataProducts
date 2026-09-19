@@ -13,7 +13,6 @@ from src.services.sessions import end_session, resolve_session
 
 _CONTRASENA = "Trazabilidad#2026"
 _T0 = datetime(2026, 9, 19, 12, 0, tzinfo=UTC)
-_IP = "198.51.100.20"
 
 
 @pytest.fixture
@@ -24,9 +23,7 @@ async def maria(db_session: AsyncSession) -> AuthResult:
 
 
 async def _iniciar(db: AsyncSession, momento: datetime = _T0) -> str:
-    resultado = await login(
-        db, username="maria", password=_CONTRASENA, client_ip=_IP, now=momento
-    )
+    resultado = await login(db, username="maria", password=_CONTRASENA, now=momento)
     return resultado.session_token
 
 

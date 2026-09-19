@@ -24,7 +24,6 @@ from src.models.domain import AuthContext, CompanyData, UserData
 from src.repos.company import CompanyRepo
 from src.repos.user import UserRepo
 from src.services.password_policy import password_error
-from src.services.rate_limit import ensure_not_blocked, record_attempt
 from src.services.sessions import start_session
 
 REQUIRED_FIELD = "Campo obligatorio."
@@ -115,29 +114,15 @@ async def _authenticate(
 
 
 async def login(
-    db: AsyncSession, *, username: str, password: str, client_ip: str, now: datetime
+    db: AsyncSession, *, username: str, password: str, now: datetime
 ) -> AuthResult:
     """Inicio de sesión solo con usuario y contraseña (RN-3, CA-2.1).
 
-    Si el usuario o el origen están bloqueados, lanza TooManyAttemptsError sin
-    comprobar credenciales (CA-2.5, CA-2.6). Cualquier fallo de credenciales
-    lanza el mismo InvalidCredentialsError (RN-6) y queda registrado.
+    Cualquier fallo de credenciales lanza el mismo InvalidCredentialsError
+    (RN-6). No hay bloqueo por intentos fallidos: fuera de alcance (spec D-4).
     """
-    username_normalized = normalize_name(username)
-    await ensure_not_blocked(
-        db, username_normalized=username_normalized, client_ip=client_ip, now=now
-    )
-    autenticado = await _authenticate(db, username_normalized, password)
-    await record_attempt(
-        db,
-        username_normalized=username_normalized,
-        client_ip=client_ip,
-        succeeded=autenticado is not None,
-        now=now,
-    )
+    autenticado = await _authenticate(db, normalize_name(username), password)
     if autenticado is None:
-        # El fallo debe quedar guardado aunque la petición termine en error.
-        await db.commit()
         raise InvalidCredentialsError()
 
     user, company = autenticado
