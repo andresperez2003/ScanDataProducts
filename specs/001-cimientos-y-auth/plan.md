@@ -11,7 +11,7 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 
 | Decisión | Elección | Motivo | Alternativa descartada |
 | --- | --- | --- | --- |
-| Runtime | Python 3.12 | Tipado moderno (`X \| None`, genéricos nativos) que `mypy --strict` aprovecha | 3.11: sin ventajas aquí |
+| Runtime | Python 3.14.7 | Tipado moderno (`X \| None`, genéricos nativos) que `mypy --strict` aprovecha; es la versión instalada (constitución, registro del 2026-09-19) | 3.12: no instalada en la máquina de desarrollo |
 | Framework | FastAPI | Validación con Pydantic y dependencias inyectables, que es el mecanismo con el que se hace obligatorio el `company_id` | Django: trae ORM, auth y admin que chocan con la arquitectura en capas de la constitución |
 | ORM | SQLModel | Una sola definición para tabla y schema, sobre SQLAlchemy 2 async | SQLAlchemy puro: más verboso; Tortoise: ecosistema menor |
 | BD | PostgreSQL 16 | Índices únicos sobre expresiones normalizadas y `timestamptz` real; mismo motor en dev y producción | SQLite: no reproduce los índices parciales ni el manejo de zonas horarias que este diseño usa |
@@ -63,7 +63,7 @@ backend/
    │  ├─ test_config.py  test_security.py  test_tokens.py
    │  ├─ test_csrf.py  test_errors.py  test_password_policy.py
    └─ integration/
-      ├─ test_db_fixture.py  test_repos.py  test_register.py
+      ├─ test_db_fixture.py  test_schema.py  test_repos.py  test_register.py
       ├─ test_login.py  test_rate_limit.py  test_session.py
       ├─ test_auth_api.py  test_logging.py  test_isolation.py
 
@@ -104,7 +104,7 @@ frontend/src/
 | id | UUID | no | PK |
 | company_id | UUID | no | FK → `companies.id`, índice |
 | username | text | no | tal como lo escribió el usuario |
-| username_normalized | text | no | `lower(trim(username))`, **UNIQUE** |
+| username_normalized | text | no | **UNIQUE**; misma función que `name_normalized` (NFKC + `lower` + recorte y colapso de espacios) |
 | password_hash | text | no | Argon2id codificado (incluye sal y parámetros) |
 | created_at | timestamptz | no | `now()` |
 | created_by | UUID | sí | `null` en el usuario que se autorregistra |
@@ -138,7 +138,25 @@ frontend/src/
 | succeeded | boolean | no | |
 | attempted_at | timestamptz | no | índice |
 
-Dos índices compuestos: `(username_normalized, attempted_at)` para CA-2.5 y `(client_ip, attempted_at)` para CA-2.6. Ya no lleva `company_normalized`: como el login no pide empresa, no hay nada que registrar ahí. Un trabajo de limpieza borra las filas de más de 30 días — **es la única tabla del sistema con borrado físico**, porque no es un dato de negocio; queda anotada como excepción explícita al principio 4 de la constitución.
+Dos índices compuestos: `(username_normalized, attempted_at)` para CA-2.5 y `(client_ip, attempted_at)` para CA-2.6. Ya no lleva `company_normalized`: como el login no pide empresa, no hay nada que registrar ahí.
+
+**Implementación futura (fuera de esta feature):** un trabajo de limpieza que borre las filas de más de 30 días. Será **la única tabla del sistema con borrado físico**, porque no es un dato de negocio; queda anotada como excepción explícita al principio 4 de la constitución. No afecta a ningún criterio de aceptación: las ventanas de CA-2.5 y CA-2.6 solo miran los últimos 15 minutos.
+
+### `probe_items` (temporal, T016)
+
+Tabla de prueba para verificar el aislamiento antes de que existan entidades reales. **Se elimina en la spec 002 con una migración nueva**, junto con su endpoint.
+
+| Campo | Tipo | Nulo | Restricción |
+| --- | --- | --- | --- |
+| id | UUID | no | PK |
+| company_id | UUID | no | FK → `companies.id`, índice |
+| name | text | no | |
+| created_at | timestamptz | no | `now()` |
+| created_by | UUID | no | FK → `users.id` |
+| disabled_at | timestamptz | sí | `null` = activo |
+| disabled_by | UUID | sí | FK → `users.id` |
+
+Endpoints (solo para tests): `GET /api/v1/_probe` (listar), `GET /api/v1/_probe/{id}` (ver uno), `PATCH /api/v1/_probe/{id}` (cambiar `name`). Su migración va aparte de la inicial, para poder revertirla sola en la 002.
 
 ### Notas de esquema
 
@@ -247,4 +265,4 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 - [x] Cada criterio de aceptación aparece en la tabla de trazabilidad
 - [x] Los códigos de error están decididos, no implícitos
 - [x] Nada contradice la spec
-- [x] La excepción al principio 4 (borrado en `login_attempts`) está declarada explícitamente
+- [x] La excepción al principio 4 (borrado en `login_attempts`) está declarada explícitamente, como implementación futura
