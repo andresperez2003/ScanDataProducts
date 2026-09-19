@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
 from src.core.csrf import CSRF_HEADER_NAME
+from src.core.logging import RequestLoggingMiddleware, configure_logging
 from src.core.security import warm_decoy_hash
 from src.routers.auth import router as auth_router
 from src.routers.errors import register_error_handlers
+from src.routers.probe import router as probe_router
 
 
 @asynccontextmanager
@@ -21,6 +23,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    configure_logging(settings.log_level)
     app = FastAPI(title="Trazabilidad de Lotes", lifespan=lifespan)
     # El frontend (otro origen) envía cookies y la cabecera CSRF (plan §2).
     app.add_middleware(
@@ -32,8 +35,12 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PATCH"],
         allow_headers=["Content-Type", CSRF_HEADER_NAME],
     )
+    # Añadido el último: es el más externo y cubre también las respuestas CORS.
+    app.add_middleware(RequestLoggingMiddleware)
     register_error_handlers(app)
     app.include_router(auth_router)
+    # TEMPORAL (T016): se retira al cerrar la spec 002.
+    app.include_router(probe_router)
     return app
 
 

@@ -1,5 +1,6 @@
 """Traducción de errores a HTTP con el formato único de plan §5."""
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -20,6 +21,11 @@ def _body(code: str, message: str, fields: dict[str, str]) -> dict[str, object]:
 
 
 def domain_error_response(error: DomainError) -> JSONResponse:
+    """Respuesta HTTP del error. Único punto donde se registra (constitución)."""
+    status_code = http_status_for(error)
+    structlog.get_logger().info(
+        "domain_error", code=error.code, status_code=status_code
+    )
     fields = error.fields if isinstance(error, DomainValidationError) else {}
     headers = (
         {"Retry-After": str(error.retry_after_seconds)}
@@ -28,7 +34,7 @@ def domain_error_response(error: DomainError) -> JSONResponse:
     )
     return JSONResponse(
         _body(error.code, error.message, fields),
-        status_code=http_status_for(error),
+        status_code=status_code,
         headers=headers,
     )
 
