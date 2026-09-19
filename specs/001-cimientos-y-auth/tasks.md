@@ -45,7 +45,7 @@
 
 ### Bloque 4 — Reglas de negocio
 
-- [ ] **T008** Errores de dominio en `core/errors.py` y su mapeo único a códigos HTTP.
+- [x] **T008** Errores de dominio en `core/errors.py` y su mapeo único a códigos HTTP.
       · Verificación: `pytest tests/unit/test_errors.py` — toda excepción de dominio tiene mapeo; un test recorre las subclases y falla si alguna no está en la tabla. Ningún módulo de `services/` importa `fastapi`: test que inspecciona los imports.
 
 - [ ] **T009** `services/auth.register`: normaliza, crea empresa y usuario en una transacción, traduce `IntegrityError` a `DuplicateCompanyError`.
