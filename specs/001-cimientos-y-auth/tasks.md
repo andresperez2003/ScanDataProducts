@@ -86,14 +86,14 @@
 - [x] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
       · Verificación: `npm test` — sin sesión se redirige a `/login` (CA-3.4); con sesión se renderiza el contenido; el estado de carga no parpadea mostrando la pantalla de login antes de resolver.
 
-- [ ] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
+- [x] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
       · Verificación: `npm test` — el formulario de login envía exactamente usuario y contraseña, y no muestra ni pide el nombre de empresa; un 401 muestra el mensaje genérico sin revelar la causa; un 409 en registro señala el campo de empresa. `npx tsc --noEmit` y `npm run lint` pasan.
 
 ---
 
 ## Cierre
 
-- [ ] **T020** Verificación de trazabilidad y de constitución.
+- [x] **T020** Verificación de trazabilidad y de constitución.
       · Verificación: todo criterio de aceptación de la spec tiene al menos un test que lo nombra; `pytest --cov=src --cov-fail-under=80` pasa; la revisión de constitución no reporta consultas sin `company_id`.
 
 ---

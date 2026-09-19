@@ -115,3 +115,33 @@ async def test_d_4_no_existe_tabla_de_intentos_de_login(
     )
 
     assert filas == []
+
+
+async def test_rn_1_todo_usuario_pertenece_a_exactamente_una_empresa(
+    db_session: AsyncSession,
+) -> None:
+    # company_id obligatorio y con FK: ningún usuario existe sin empresa.
+    columna = await _consultar(
+        db_session,
+        """
+            SELECT is_nullable FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'users'
+              AND column_name = 'company_id'
+        """,
+    )
+    fk = await _consultar(
+        db_session,
+        """
+            SELECT ccu.table_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON kcu.constraint_name = tc.constraint_name
+            JOIN information_schema.constraint_column_usage ccu
+              ON ccu.constraint_name = tc.constraint_name
+            WHERE tc.table_name = 'users' AND tc.constraint_type = 'FOREIGN KEY'
+              AND kcu.column_name = 'company_id'
+        """,
+    )
+
+    assert [tuple(f) for f in columna] == [("NO",)]
+    assert [tuple(f) for f in fk] == [("companies",)]
