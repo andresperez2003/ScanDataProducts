@@ -33,3 +33,11 @@ mypy = "^2.3.1"
 strict = true
 # Entiende los modelos de Pydantic, p. ej. que Settings() lee los campos del entorno.
 plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# Un único event loop para toda la sesión: el engine async de SQLAlchemy queda
+# ligado al loop en el que abre sus conexiones.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
