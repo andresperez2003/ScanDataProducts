@@ -80,7 +80,7 @@
 
 ## Fase B — Frontend
 
-- [ ] **T017** `lib/api/client.ts` y `lib/api/auth.ts`: `credentials: "include"`, lectura de la cookie `csrf_token` y envío en `X-CSRF-Token`, tipos derivados de los contratos de §5 del plan, traducción del formato de error a errores por campo.
+- [x] **T017** `lib/api/client.ts` y `lib/api/auth.ts`: `credentials: "include"`, lectura de la cookie `csrf_token` y envío en `X-CSRF-Token`, tipos derivados de los contratos de §5 del plan, traducción del formato de error a errores por campo.
       · Verificación: `npm test` — con servidor simulado, una respuesta 400 con `fields` produce errores por campo; una 401 produce el estado "no autenticado"; toda petición que modifica estado lleva la cabecera CSRF.
 
 - [ ] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
