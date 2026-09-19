@@ -65,7 +65,7 @@
 
 ### Bloque 5 — API
 
-- [ ] **T014** `core/deps.py`: `get_auth_context` como único origen del `company_id`. Routers `/api/v1/auth/*` con los cuatro endpoints de §5, cookies con sus flags, y verificación CSRF en las operaciones que modifican estado.
+- [x] **T014** `core/deps.py`: `get_auth_context` como único origen del `company_id`. Routers `/api/v1/auth/*` con los cuatro endpoints de §5, cookies con sus flags, y verificación CSRF en las operaciones que modifican estado.
       · Verificación: `pytest tests/integration/test_auth_api.py` — cada endpoint con su código de éxito y **cada** código de error del contrato. Un test comprueba que `POST /auth/login` acepta solo `username` y `password`, y que enviar `company_name` en ese cuerpo no tiene efecto. Un test comprueba los flags de las cookies (`HttpOnly`, `SameSite`, y `Secure` según entorno). Un test envía un `company_id` en el cuerpo del registro y comprueba que se ignora (CA-4.3). Un test envía una petición de cierre de sesión sin cabecera CSRF y espera 403.
 
 - [ ] **T015** Logging estructurado con `request_id` y `company_id`, y filtro que redacta cualquier clave `password`.
