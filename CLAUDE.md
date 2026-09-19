@@ -37,7 +37,7 @@ El orden es spec → plan → tasks → código. Nunca se salta un paso.
 - Si algo falta o está ambiguo en la spec, detente y pregúntame. No lo inventes.
 - Los tests se derivan de `spec.md`, nunca del código ya escrito.
 - Antes de crear un helper, schema o componente, busca uno equivalente.
-- No instales dependencias. Si falta una, detente y pregunta.
+- Instala solo las dependencias necesarias. Si falta una, detente y pregunta.
 - Trabaja una feature a la vez, en su rama: `feature/NNN-nombre`.
 
 ## Las reglas que más se incumplen

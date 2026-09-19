@@ -1,0 +1,35 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "scan-photos-backend"
+version = "0.1.0"
+description = "Backend FastAPI para trazabilidad de lotes"
+requires-python = ">=3.14"
+
+[tool.poetry.dependencies]
+python = "^3.14"
+fastapi = "^0.141.1"
+uvicorn = {version = "^0.53.0", extras = ["standard"]}
+sqlmodel = "^0.0.42"
+alembic = "^1.20.0"
+asyncpg = "^0.31.0"
+pydantic = "^2.13.5"
+pydantic-settings = "^2.15.0"
+argon2-cffi = "^25.1.0"
+itsdangerous = "^2.2.0"
+structlog = "^26.1.0"
+pytest = "^9.1.1"
+pytest-asyncio = "^1.4.0"
+pytest-cov = "^7.1.0"
+httpx = "^0.28.1"
+ruff = "^0.16.8"
+mypy = "^2.3.1"
+
+[tool.poetry.group.dev.dependencies]
+
+[tool.mypy]
+strict = true
+# Entiende los modelos de Pydantic, p. ej. que Settings() lee los campos del entorno.
+plugins = ["pydantic.mypy"]

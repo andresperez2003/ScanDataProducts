@@ -8,7 +8,7 @@
 - `[P]` = puede ejecutarse en paralelo con las otras `[P]` de su bloque (no tocan los mismos archivos).
 - Toda tarea trae su línea de **Verificación**. Si no se puede verificar, está mal escrita.
 - Los tests se escriben **antes** que el código de cada tarea y deben verse fallar primero.
-- 20 tareas: excede el límite de 15 de la constitución. Ver la nota al final.
+- 20 tareas. La constitución ya no limita el número de tareas por feature (registro del 2026-09-19).
 
 ---
 
@@ -16,20 +16,20 @@
 
 ### Bloque 0 — Andamiaje
 
-- [ ] **T001** `core/config.py`: `Settings` de Pydantic con todas las variables de `.env.example`. La app no arranca si falta una.
+- [x] **T001** `core/config.py`: `Settings` de Pydantic con todas las variables de `.env.example`. La app no arranca si falta una.
       · Verificación: `pytest tests/unit/test_config.py` — un test comprueba que falta `SESSION_SECRET` lanza error al instanciar, y otro que un `.env` completo carga los valores correctos.
-
-- [ ] **T002** `core/db.py`: engine async, `sessionmaker`, dependencia `get_db`. Fixtures de pytest: sesión por test en transacción con rollback, y factoría que crea **dos empresas** con un usuario cada una.
-      · Verificación: `pytest tests/integration/test_db_fixture.py` — un test inserta una fila y otro comprueba que la tabla está vacía, demostrando que el rollback funciona. La factoría devuelve dos `company_id` distintos.
 
 ### Bloque 1 — Datos
 
-- [ ] **T003** Modelos `Company`, `User`, `Session`, `LoginAttempt` según §4 del plan, y migración inicial de Alembic. Revisar a mano el archivo generado: `--autogenerate` no detecta el índice parcial de `sessions` ni la FK diferida de `companies.disabled_by`.
-      · Verificación: `alembic upgrade head` y `alembic downgrade base` corren sin error. Un test consulta `pg_indexes` y `information_schema.table_constraints` y comprueba que existen: `UNIQUE(companies.name_normalized)`, `UNIQUE(users.company_id, users.username_normalized)`, el índice parcial de `sessions` y la FK diferida.
+- [x] **T002** Modelos `Company`, `User`, `Session`, `LoginAttempt` según §4 del plan, y migración inicial de Alembic. Revisar a mano el archivo generado: `--autogenerate` no detecta el índice parcial de `sessions` ni la FK diferida de `companies.disabled_by`.
+      · Verificación: `alembic upgrade head`, `alembic downgrade base` y de nuevo `alembic upgrade head` corren sin error. Las comprobaciones de esquema con `pytest` quedan en T003, que es donde nacen las fixtures de base de datos.
+
+- [ ] **T003** `core/db.py`: engine async, `sessionmaker`, dependencia `get_db`. Fixtures de pytest: sesión por test en transacción con rollback, y factoría que crea **dos empresas** con un usuario cada una.
+      · Verificación: `pytest tests/integration/test_db_fixture.py tests/integration/test_schema.py` — un test inserta una empresa y otro comprueba que la tabla está vacía, demostrando que el rollback funciona. La factoría devuelve dos `company_id` distintos. `test_schema.py` consulta `pg_indexes` e `information_schema.table_constraints` y comprueba que existen: `UNIQUE(companies.name_normalized)`, `UNIQUE(users.username_normalized)` (global, D-1), el índice parcial de `sessions` y la FK diferida; y `test_ca_1_5_sin_columna_de_texto_plano` comprueba que `users` no tiene ninguna columna de contraseña salvo `password_hash`.
 
 ### Bloque 2 — Seguridad
 
-- [ ] **T004** `[P]` `core/security.py`: hash y verificación Argon2id, y la función de normalización NFKC + `lower` + colapso de espacios, compartida por búsqueda e inserción.
+- [ ] **T004** `[P]` `core/security.py`: hash y verificación Argon2id, y la función de normalización NFKC + `lower` + colapso de espacios, compartida por búsqueda e inserción, y usada tanto para nombres de empresa como de usuario.
       · Verificación: `pytest tests/unit/test_security.py` — una contraseña de 200 caracteres hashea y verifica; los espacios al inicio y al final se conservan; `"  Acme   S.A. "` y `"acme s.a."` normalizan igual; un test mide que la verificación tarda menos de 400 ms.
 
 - [ ] **T005** `[P]` `core/security.py`: generación de token de sesión de 32 bytes, su SHA-256, y firma y verificación con `itsdangerous`.
@@ -71,7 +71,7 @@
 - [ ] **T015** Logging estructurado con `request_id` y `company_id`, y filtro que redacta cualquier clave `password`.
       · Verificación: `pytest tests/integration/test_logging.py` — captura la salida de un registro exitoso y falla si la contraseña aparece en cualquier forma (CA-1.6). Un test comprueba que un error manejado se registra exactamente una vez.
 
-- [ ] **T016** Endpoint sonda temporal `/api/v1/_probe/{id}` sobre una tabla de prueba con `company_id`, para verificar el aislamiento antes de que existan features reales. Se elimina al cerrar la spec 002.
+- [ ] **T016** Endpoint sonda temporal `/api/v1/_probe` sobre la tabla `probe_items` (plan §4: listar, ver uno, cambiar nombre; migración propia), para verificar el aislamiento antes de que existan features reales. Se elimina al cerrar la spec 002.
       · Verificación: `pytest tests/integration/test_isolation.py` — CA-4.1, CA-4.2 y CA-4.4: el usuario de B pide el recurso de A y recibe **404**, lista y recibe solo lo suyo, e intenta modificarlo y falla sin que el recurso de A cambie.
 
 ---
@@ -101,7 +101,7 @@
 | Criterio | Tarea | Test |
 | --- | --- | --- |
 | CA-1.1 – CA-1.4 | T009, T010 | `test_register.py`, `test_password_policy.py` |
-| CA-1.5 | T003 | `test_schema.py::test_ca_1_5_sin_columna_de_texto_plano` |
+| CA-1.5 | T002, T003 | `test_schema.py::test_ca_1_5_sin_columna_de_texto_plano` |
 | CA-1.6 | T015 | `test_logging.py::test_ca_1_6_password_no_aparece_en_logs` |
 | CA-2.1 – CA-2.4 | T011 | `test_login.py` |
 | CA-2.5, CA-2.6 | T012 | `test_rate_limit.py` |
@@ -115,21 +115,9 @@
 
 ---
 
-## Nota sobre el límite de tareas
-
-La constitución dice: *"si una feature necesita más de 15 tareas, se parte en dos specs"*. Esta salió en **20**, porque incluye backend y frontend de la misma capacidad.
-
-Tres salidas, en orden de preferencia:
-
-1. **Modificar la regla** a *"máximo 15 tareas por fase"*, y anotarlo en el registro de cambios de la constitución. Es lo que recomiendo: partir auth en dos specs dejaría una spec de backend sin nada que un usuario pueda usar, que es justo lo que la regla intenta evitar.
-2. Partir en `001a` (backend) y `001b` (frontend), aceptando que 001a no es entregable por sí sola.
-3. Dejarlo como excepción puntual anotada aquí.
-
-**Decide antes de empezar T001.** Una regla que se incumple en la primera feature deja de ser una regla.
-
 ## Checklist de salida
 
 - [x] Toda tarea tiene criterio de verificación ejecutable
 - [x] Ningún criterio de aceptación queda sin tarea
 - [x] Las tareas `[P]` de un mismo bloque no tocan los mismos archivos
-- [ ] Resuelto el conflicto con el límite de 15 tareas
+- [x] Resuelto el conflicto con el límite de tareas (eliminado de la constitución)
