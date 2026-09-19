@@ -83,7 +83,7 @@
 - [x] **T017** `lib/api/client.ts` y `lib/api/auth.ts`: `credentials: "include"`, lectura de la cookie `csrf_token` y envío en `X-CSRF-Token`, tipos derivados de los contratos de §5 del plan, traducción del formato de error a errores por campo.
       · Verificación: `npm test` — con servidor simulado, una respuesta 400 con `fields` produce errores por campo; una 401 produce el estado "no autenticado"; toda petición que modifica estado lleva la cabecera CSRF.
 
-- [ ] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
+- [x] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
       · Verificación: `npm test` — sin sesión se redirige a `/login` (CA-3.4); con sesión se renderiza el contenido; el estado de carga no parpadea mostrando la pantalla de login antes de resolver.
 
 - [ ] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
