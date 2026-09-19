@@ -25,7 +25,7 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 | Datos en frontend | TanStack Query | El estado de servidor se gestiona en una capa, no con `useEffect` (constitución, convenciones de frontend) | `useEffect` a mano: prohibido por la constitución |
 | Tests | pytest + httpx.ASGITransport | Tests de integración contra la app real y Postgres real | TestClient síncrono: no ejercita el camino async |
 
-**Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
+**Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. **Calibrado en T004 (2026-09-19):** con los de partida la verificación tardaba ~38 ms (16 núcleos); se fijan `time_cost=8`, `memory_cost=131072` (128 MiB), `parallelism=4`, que dan ~183 ms de mediana y ~200 ms de máximo. Se descartó 256 MiB con `time_cost=4` (mismo tiempo, el doble de memoria por inicio de sesión). Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
 
 ## 3. Estructura
 
