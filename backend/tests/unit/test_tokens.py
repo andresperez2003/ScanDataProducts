@@ -52,9 +52,11 @@ def test_nfr_7_un_token_firmado_se_recupera_intacto() -> None:
 
 
 def test_nfr_7_una_firma_manipulada_se_rechaza() -> None:
-    firmado = sign_session_token(generate_session_token())
-    ultimo = firmado[-1]
-    manipulado = firmado[:-1] + ("A" if ultimo != "A" else "B")
+    token, firma = sign_session_token(generate_session_token()).rsplit(".", 1)
+    # Se altera el primer carácter de la firma: el último lleva bits de relleno
+    # del base64 y cambiarlo puede no alterar los bytes decodificados.
+    otro = "A" if firma[0] != "A" else "B"
+    manipulado = f"{token}.{otro}{firma[1:]}"
 
     assert unsign_session_token(manipulado) is None
 

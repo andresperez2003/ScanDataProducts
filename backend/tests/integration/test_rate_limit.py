@@ -6,7 +6,7 @@ import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.errors import InvalidCredentialsError, TooManyAttemptsError
-from src.services.auth import LoginResult, login, register
+from src.services.auth import AuthResult, login, register
 
 _CONTRASENA = "Trazabilidad#2026"
 _INCORRECTA = "Incorrecta#2026"
@@ -21,7 +21,7 @@ def _min(minutos: float) -> datetime:
 
 async def _entrar(
     db: AsyncSession, usuario: str, contrasena: str, momento: datetime, ip: str = _IP
-) -> LoginResult:
+) -> AuthResult:
     return await login(
         db, username=usuario, password=contrasena, client_ip=ip, now=momento
     )
@@ -37,7 +37,7 @@ async def _fallar(
 @pytest.fixture
 async def maria(db_session: AsyncSession) -> str:
     await register(
-        db_session, company_name="Acme", username="maria", password=_CONTRASENA
+        db_session, company_name="Acme", username="maria", password=_CONTRASENA, now=_T0
     )
     return "maria"
 
@@ -122,7 +122,7 @@ async def test_ca_2_5_el_bloqueo_de_un_usuario_no_afecta_a_otro(
     db_session: AsyncSession, maria: str
 ) -> None:
     await register(
-        db_session, company_name="Otra", username="pedro", password=_CONTRASENA
+        db_session, company_name="Otra", username="pedro", password=_CONTRASENA, now=_T0
     )
     for minuto in range(5):
         await _fallar(db_session, maria, _min(minuto))

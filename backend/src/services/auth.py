@@ -1,4 +1,4 @@
-"""Servicio de autenticación: registro (T009), inicio de sesión (T011, T012)."""
+"""Servicio de autenticación: registro, inicio de sesión e identidad actual."""
 
 import uuid
 from dataclasses import dataclass
@@ -12,6 +12,7 @@ from src.core.errors import (
     DuplicateCompanyError,
     DuplicateUsernameError,
     InvalidCredentialsError,
+    NotAuthenticatedError,
 )
 from src.core.security import (
     hash_password,
@@ -19,7 +20,7 @@ from src.core.security import (
     verify_against_decoy,
     verify_password,
 )
-from src.models.domain import CompanyData, UserData
+from src.models.domain import AuthContext, CompanyData, UserData
 from src.repos.company import CompanyRepo
 from src.repos.user import UserRepo
 from src.services.password_policy import password_error
@@ -31,12 +32,8 @@ REQUIRED_FIELD = "Campo obligatorio."
 
 @dataclass(frozen=True)
 class AuthResult:
-    user: UserData
-    company: CompanyData
+    """Resultado de registrarse o iniciar sesión: la sesión ya está creada."""
 
-
-@dataclass(frozen=True)
-class LoginResult:
     user: UserData
     company: CompanyData
     # Token en claro: solo para la cookie de la respuesta, nunca se almacena.
@@ -58,9 +55,9 @@ def _register_errors(company_name: str, username: str, password: str) -> dict[st
 
 
 async def register(
-    db: AsyncSession, *, company_name: str, username: str, password: str
+    db: AsyncSession, *, company_name: str, username: str, password: str, now: datetime
 ) -> AuthResult:
-    """Crea empresa y primer usuario en una sola transacción (CA-1.1).
+    """Crea empresa, primer usuario y su sesión en una sola transacción (CA-1.1).
 
     Los duplicados los detectan los UNIQUE de la BD, también bajo concurrencia
     (spec §5); la violación se traduce a error de dominio y no se crea nada.
@@ -92,8 +89,9 @@ async def register(
         await db.rollback()
         raise DuplicateUsernameError() from None
 
+    token = await start_session(db, user, now=now)
     await db.commit()
-    return AuthResult(user=user, company=company)
+    return AuthResult(user=user, company=company, session_token=token)
 
 
 async def _authenticate(
@@ -118,7 +116,7 @@ async def _authenticate(
 
 async def login(
     db: AsyncSession, *, username: str, password: str, client_ip: str, now: datetime
-) -> LoginResult:
+) -> AuthResult:
     """Inicio de sesión solo con usuario y contraseña (RN-3, CA-2.1).
 
     Si el usuario o el origen están bloqueados, lanza TooManyAttemptsError sin
@@ -145,4 +143,15 @@ async def login(
     user, company = autenticado
     token = await start_session(db, user, now=now)
     await db.commit()
-    return LoginResult(user=user, company=company, session_token=token)
+    return AuthResult(user=user, company=company, session_token=token)
+
+
+async def current_identity(
+    db: AsyncSession, context: AuthContext
+) -> tuple[UserData, CompanyData]:
+    """Usuario y empresa de la sesión, leídos siempre con su company_id (RN-8)."""
+    user = await UserRepo(db).get(context.company_id, context.user_id)
+    company = await CompanyRepo(db).get(context.company_id)
+    if user is None or company is None:
+        raise NotAuthenticatedError()
+    return user, company

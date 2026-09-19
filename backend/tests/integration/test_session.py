@@ -19,7 +19,7 @@ _IP = "198.51.100.20"
 @pytest.fixture
 async def maria(db_session: AsyncSession) -> AuthResult:
     return await register(
-        db_session, company_name="Acme", username="maria", password=_CONTRASENA
+        db_session, company_name="Acme", username="maria", password=_CONTRASENA, now=_T0
     )
 
 

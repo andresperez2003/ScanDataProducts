@@ -3,6 +3,7 @@
 import asyncio
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import delete
@@ -16,11 +17,12 @@ from src.core.errors import (
     DuplicateUsernameError,
 )
 from src.core.security import verify_password
-from src.models import Company, User
+from src.models import Company, Session, User
 from src.services.auth import register
 from src.services.password_policy import PasswordRequirement
 
 _CONTRASENA = "Trazabilidad#2026"
+_AHORA = datetime(2026, 9, 19, 12, 0, tzinfo=UTC)
 
 
 async def _empresas_con_nombre(db: AsyncSession, normalizado: str) -> int:
@@ -37,7 +39,11 @@ async def test_ca_1_1_registro_crea_empresa_y_usuario_asociado(
     db_session: AsyncSession,
 ) -> None:
     resultado = await register(
-        db_session, company_name="Acme S.A.", username="Maria", password=_CONTRASENA
+        db_session,
+        company_name="Acme S.A.",
+        username="Maria",
+        password=_CONTRASENA,
+        now=_AHORA,
     )
 
     assert resultado.company.name == "Acme S.A."
@@ -52,12 +58,20 @@ async def test_ca_1_2_empresa_existente_se_rechaza_sin_crear_nada(
     db_session: AsyncSession,
 ) -> None:
     await register(
-        db_session, company_name="Acme S.A.", username="maria", password=_CONTRASENA
+        db_session,
+        company_name="Acme S.A.",
+        username="maria",
+        password=_CONTRASENA,
+        now=_AHORA,
     )
 
     with pytest.raises(DuplicateCompanyError):
         await register(
-            db_session, company_name="Acme S.A.", username="pedro", password=_CONTRASENA
+            db_session,
+            company_name="Acme S.A.",
+            username="pedro",
+            password=_CONTRASENA,
+            now=_AHORA,
         )
 
     assert await _empresas_con_nombre(db_session, "acme s.a.") == 1
@@ -68,7 +82,11 @@ async def test_borde_empresa_que_difiere_en_mayusculas_y_espacios_es_duplicada(
     db_session: AsyncSession,
 ) -> None:
     primera = await register(
-        db_session, company_name="Acme S.A.", username="maria", password=_CONTRASENA
+        db_session,
+        company_name="Acme S.A.",
+        username="maria",
+        password=_CONTRASENA,
+        now=_AHORA,
     )
 
     with pytest.raises(DuplicateCompanyError):
@@ -77,6 +95,7 @@ async def test_borde_empresa_que_difiere_en_mayusculas_y_espacios_es_duplicada(
             company_name="  acme   s.a. ",
             username="pedro",
             password=_CONTRASENA,
+            now=_AHORA,
         )
 
     # El nombre se almacena tal como lo escribió el usuario.
@@ -87,7 +106,11 @@ async def test_borde_usuario_que_difiere_en_mayusculas_se_rechaza_sin_crear_nada
     db_session: AsyncSession,
 ) -> None:
     await register(
-        db_session, company_name="Empresa Uno", username="Admin", password=_CONTRASENA
+        db_session,
+        company_name="Empresa Uno",
+        username="Admin",
+        password=_CONTRASENA,
+        now=_AHORA,
     )
 
     with pytest.raises(DuplicateUsernameError):
@@ -96,6 +119,7 @@ async def test_borde_usuario_que_difiere_en_mayusculas_se_rechaza_sin_crear_nada
             company_name="Empresa Dos",
             username="ADMIN",
             password=_CONTRASENA,
+            now=_AHORA,
         )
 
     # La empresa del segundo intento tampoco se crea.
@@ -117,7 +141,7 @@ async def test_ca_1_3_campo_vacio_indica_cual_falta_sin_crear_nada(
     db_session: AsyncSession, campos: dict[str, str], vacio: str
 ) -> None:
     with pytest.raises(DomainValidationError) as error:
-        await register(db_session, password=_CONTRASENA, **campos)
+        await register(db_session, password=_CONTRASENA, **campos, now=_AHORA)
 
     assert set(error.value.fields) == {vacio}
     assert await _usuarios_con_nombre(db_session, "maria") == 0
@@ -128,7 +152,9 @@ async def test_ca_1_3_contrasena_vacia_indica_el_campo(
     db_session: AsyncSession,
 ) -> None:
     with pytest.raises(DomainValidationError) as error:
-        await register(db_session, company_name="Acme", username="maria", password="")
+        await register(
+            db_session, company_name="Acme", username="maria", password="", now=_AHORA
+        )
 
     assert set(error.value.fields) == {"password"}
 
@@ -137,7 +163,9 @@ async def test_ca_1_3_todos_los_campos_vacios_se_indican_juntos(
     db_session: AsyncSession,
 ) -> None:
     with pytest.raises(DomainValidationError) as error:
-        await register(db_session, company_name="", username="", password="")
+        await register(
+            db_session, company_name="", username="", password="", now=_AHORA
+        )
 
     assert set(error.value.fields) == {"company_name", "username", "password"}
 
@@ -147,7 +175,11 @@ async def test_ca_1_4_contrasena_invalida_indica_el_requisito_sin_crear_nada(
 ) -> None:
     with pytest.raises(DomainValidationError) as error:
         await register(
-            db_session, company_name="Acme", username="maria", password="Corta#1"
+            db_session,
+            company_name="Acme",
+            username="maria",
+            password="Corta#1",
+            now=_AHORA,
         )
 
     assert PasswordRequirement.MIN_LENGTH.message in error.value.fields["password"]
@@ -158,7 +190,11 @@ async def test_ca_1_5_la_contrasena_solo_se_guarda_como_hash_argon2id(
     db_session: AsyncSession,
 ) -> None:
     resultado = await register(
-        db_session, company_name="Acme", username="maria", password=_CONTRASENA
+        db_session,
+        company_name="Acme",
+        username="maria",
+        password=_CONTRASENA,
+        now=_AHORA,
     )
 
     guardado = await db_session.get(User, resultado.user.id)
@@ -174,7 +210,7 @@ async def test_borde_contrasena_de_200_caracteres_se_acepta(
     larga = ("Aa1#" * 50)[:200]
 
     resultado = await register(
-        db_session, company_name="Acme", username="maria", password=larga
+        db_session, company_name="Acme", username="maria", password=larga, now=_AHORA
     )
 
     assert await verify_password(resultado.user.password_hash, larga)
@@ -196,6 +232,8 @@ async def nombre_unico() -> AsyncIterator[str]:
         empresas = select(Company.id).where(
             col(Company.name_normalized) == f"concurrente {sufijo}"
         )
+        # El registro también crea la sesión (CA-1.1): se borra antes que el usuario.
+        await db.exec(delete(Session).where(col(Session.company_id).in_(empresas)))
         await db.exec(delete(User).where(col(User.company_id).in_(empresas)))
         await db.exec(
             delete(Company).where(
@@ -215,6 +253,7 @@ async def test_borde_registros_simultaneos_con_el_mismo_nombre(
                 company_name=f"Concurrente {nombre_unico}",
                 username=f"{usuario}-{nombre_unico}",
                 password=_CONTRASENA,
+                now=_AHORA,
             )
 
     resultados = await asyncio.gather(

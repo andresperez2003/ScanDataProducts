@@ -22,7 +22,7 @@ _IP = "198.51.100.7"
 
 async def _registrar(db: AsyncSession, empresa: str, usuario: str) -> AuthResult:
     return await register(
-        db, company_name=empresa, username=usuario, password=_CONTRASENA
+        db, company_name=empresa, username=usuario, password=_CONTRASENA, now=_AHORA
     )
 
 
@@ -96,10 +96,12 @@ async def test_ca_2_2_contrasena_incorrecta_se_rechaza_sin_crear_sesion(
     db_session: AsyncSession,
 ) -> None:
     registrado = await _registrar(db_session, "Acme", "maria")
+    # El registro ya abre una sesión (CA-1.1): se compara antes y después.
+    antes = await _sesiones_de(db_session, registrado)
 
     await _error_de_login(db_session, "maria", "Incorrecta#2026")
 
-    assert await _sesiones_de(db_session, registrado) == 0
+    assert await _sesiones_de(db_session, registrado) == antes
 
 
 async def test_ca_2_3_usuario_inexistente_se_rechaza(db_session: AsyncSession) -> None:
@@ -116,10 +118,11 @@ async def test_ca_2_4_usuario_deshabilitado_se_rechaza_con_credenciales_correcta
         disabled_by=registrado.user.id,
         at=_AHORA,
     )
+    antes = await _sesiones_de(db_session, registrado)
 
     await _error_de_login(db_session, "maria", _CONTRASENA)
 
-    assert await _sesiones_de(db_session, registrado) == 0
+    assert await _sesiones_de(db_session, registrado) == antes
 
 
 async def test_rn_6_mensaje_identico(db_session: AsyncSession) -> None:
