@@ -5,11 +5,14 @@ from pathlib import Path
 
 from src.core.errors import (
     HTTP_STATUS,
+    CsrfFailedError,
     DomainError,
     DomainValidationError,
     DuplicateCompanyError,
+    DuplicateUsernameError,
     InvalidCredentialsError,
     NotAuthenticatedError,
+    NotFoundError,
     TooManyAttemptsError,
     http_status_for,
 )
@@ -45,6 +48,9 @@ def test_principio_5_codigos_y_estados_del_contrato() -> None:
         InvalidCredentialsError: ("INVALID_CREDENTIALS", 401),
         TooManyAttemptsError: ("TOO_MANY_ATTEMPTS", 429),
         NotAuthenticatedError: ("NOT_AUTHENTICATED", 401),
+        DuplicateUsernameError: ("USERNAME_TAKEN", 409),
+        NotFoundError: ("NOT_FOUND", 404),
+        CsrfFailedError: ("CSRF_FAILED", 403),
     }
 
     for clase, (codigo, estado) in esperados.items():
@@ -60,6 +66,12 @@ def test_rn_6_credenciales_invalidas_siempre_el_mismo_mensaje() -> None:
     # No admite mensaje propio: ninguna causa puede filtrarse al cliente.
     assert InvalidCredentialsError().message == InvalidCredentialsError().message
     assert InvalidCredentialsError().message != ""
+
+
+def test_rn_9_no_encontrado_siempre_el_mismo_mensaje() -> None:
+    # No admite mensaje propio: no puede revelar si existe en otra empresa.
+    assert NotFoundError().message == NotFoundError().message
+    assert NotFoundError().message != ""
 
 
 def test_ca_1_3_error_de_validacion_indica_los_campos() -> None:

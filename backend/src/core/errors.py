@@ -37,6 +37,13 @@ class DuplicateCompanyError(DomainError):
     default_message = "Ese nombre de empresa ya está en uso."
 
 
+class DuplicateUsernameError(DomainError):
+    """RN-3: el nombre de usuario es único en todo el sistema."""
+
+    code = "USERNAME_TAKEN"
+    default_message = "Ese nombre de usuario ya está en uso."
+
+
 class InvalidCredentialsError(DomainError):
     """Mensaje único sea cual sea la causa (RN-6, CA-2.2 a CA-2.4)."""
 
@@ -66,13 +73,34 @@ class NotAuthenticatedError(DomainError):
     default_message = "Inicia sesión para continuar."
 
 
+class NotFoundError(DomainError):
+    """Recurso inexistente o de otra empresa: indistinguibles (RN-9, CA-4.1)."""
+
+    code = "NOT_FOUND"
+    default_message = "No encontrado."
+
+    def __init__(self) -> None:
+        # Sin mensaje propio a propósito: no puede revelar si existe en otra empresa.
+        super().__init__()
+
+
+class CsrfFailedError(DomainError):
+    """Petición que modifica estado sin token CSRF válido (spec §5, último caso)."""
+
+    code = "CSRF_FAILED"
+    default_message = "La petición no pudo verificarse. Recarga la página."
+
+
 # Único lugar donde cada excepción de dominio se asocia a un estado HTTP.
 HTTP_STATUS: dict[type[DomainError], int] = {
     DomainValidationError: HTTPStatus.BAD_REQUEST,
     DuplicateCompanyError: HTTPStatus.CONFLICT,
+    DuplicateUsernameError: HTTPStatus.CONFLICT,
     InvalidCredentialsError: HTTPStatus.UNAUTHORIZED,
     TooManyAttemptsError: HTTPStatus.TOO_MANY_REQUESTS,
     NotAuthenticatedError: HTTPStatus.UNAUTHORIZED,
+    NotFoundError: HTTPStatus.NOT_FOUND,
+    CsrfFailedError: HTTPStatus.FORBIDDEN,
 }
 
 
