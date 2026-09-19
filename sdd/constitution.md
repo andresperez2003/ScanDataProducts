@@ -1,7 +1,7 @@
 # Constitución del proyecto — Trazabilidad de Lotes
 
 **Vigente desde:** 2026-09-18
-**Stack:** Python 3.12 · FastAPI · SQLModel · Alembic · PostgreSQL · React + Vite · pytest
+**Stack:** Python 3.14.7 · FastAPI · SQLModel · Alembic · PostgreSQL · React + Vite · pytest
 **Contexto:** proyecto nuevo, multi-tenant, desarrollo en solitario, arquitectura en capas.
 
 > Estas reglas no se negocian por feature. Si una estorba de verdad, se cambia aquí
@@ -71,7 +71,6 @@ Este es el principio más importante del proyecto. Una fuga de datos entre empre
 - Solo se escribe código que corresponda a una tarea de `tasks.md`. Nada "de paso", nada "ya que estaba".
 - Un endpoint, campo, pantalla o modelo que no esté en `spec.md` no se crea. Si falta, se detiene el trabajo y se corrige la spec primero.
 - Antes de crear un helper, schema o componente, se busca uno equivalente. Crear un duplicado exige decir por qué en el commit.
-- Si una feature necesita más de 20 tareas, se parte en dos specs.
 
 ---
 
@@ -120,4 +119,7 @@ No corrijas nada todavía, solo lista.
 
 | Fecha | Cambio | Motivo |
 | --- | --- | --- |
+| 2026-09-19 | Eliminado el límite de tareas por feature | Partir specs por número de tareas dejaba entregas sin valor usable (001-cimientos-y-auth tiene 20) |
+| 2026-09-19 | Python 3.12 → 3.14.7 | Versión instalada en la máquina de desarrollo |
+| 2026-09-18 | Límite de 15 tareas por fase, no global | Permitir features backend + frontend completos sin partir innecesariamente |
 | 2026-09-18 | Versión inicial | — |

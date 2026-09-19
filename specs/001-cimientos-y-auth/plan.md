@@ -11,7 +11,7 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 
 | Decisión | Elección | Motivo | Alternativa descartada |
 | --- | --- | --- | --- |
-| Runtime | Python 3.12 | Tipado moderno (`X \| None`, genéricos nativos) que `mypy --strict` aprovecha | 3.11: sin ventajas aquí |
+| Runtime | Python 3.14.7 | Tipado moderno (`X \| None`, genéricos nativos) que `mypy --strict` aprovecha; es la versión instalada (constitución, registro del 2026-09-19) | 3.12: no instalada en la máquina de desarrollo |
 | Framework | FastAPI | Validación con Pydantic y dependencias inyectables, que es el mecanismo con el que se hace obligatorio el `company_id` | Django: trae ORM, auth y admin que chocan con la arquitectura en capas de la constitución |
 | ORM | SQLModel | Una sola definición para tabla y schema, sobre SQLAlchemy 2 async | SQLAlchemy puro: más verboso; Tortoise: ecosistema menor |
 | BD | PostgreSQL 16 | Índices únicos sobre expresiones normalizadas y `timestamptz` real; mismo motor en dev y producción | SQLite: no reproduce los índices parciales ni el manejo de zonas horarias que este diseño usa |
@@ -25,7 +25,7 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 | Datos en frontend | TanStack Query | El estado de servidor se gestiona en una capa, no con `useEffect` (constitución, convenciones de frontend) | `useEffect` a mano: prohibido por la constitución |
 | Tests | pytest + httpx.ASGITransport | Tests de integración contra la app real y Postgres real | TestClient síncrono: no ejercita el camino async |
 
-**Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
+**Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. **Calibrado en T004 (2026-09-19):** con los de partida la verificación tardaba ~38 ms (16 núcleos); se fijan `time_cost=8`, `memory_cost=131072` (128 MiB), `parallelism=4`, que dan ~183 ms de mediana y ~200 ms de máximo. Se descartó 256 MiB con `time_cost=4` (mismo tiempo, el doble de memoria por inicio de sesión). Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
 
 ## 3. Estructura
 
@@ -63,7 +63,7 @@ backend/
    │  ├─ test_config.py  test_security.py  test_tokens.py
    │  ├─ test_csrf.py  test_errors.py  test_password_policy.py
    └─ integration/
-      ├─ test_db_fixture.py  test_repos.py  test_register.py
+      ├─ test_db_fixture.py  test_schema.py  test_repos.py  test_register.py
       ├─ test_login.py  test_rate_limit.py  test_session.py
       ├─ test_auth_api.py  test_logging.py  test_isolation.py
 
@@ -104,7 +104,7 @@ frontend/src/
 | id | UUID | no | PK |
 | company_id | UUID | no | FK → `companies.id`, índice |
 | username | text | no | tal como lo escribió el usuario |
-| username_normalized | text | no | `lower(trim(username))`, **UNIQUE** |
+| username_normalized | text | no | **UNIQUE**; misma función que `name_normalized` (NFKC + `lower` + recorte y colapso de espacios) |
 | password_hash | text | no | Argon2id codificado (incluye sal y parámetros) |
 | created_at | timestamptz | no | `now()` |
 | created_by | UUID | sí | `null` en el usuario que se autorregistra |
@@ -138,7 +138,25 @@ frontend/src/
 | succeeded | boolean | no | |
 | attempted_at | timestamptz | no | índice |
 
-Dos índices compuestos: `(username_normalized, attempted_at)` para CA-2.5 y `(client_ip, attempted_at)` para CA-2.6. Ya no lleva `company_normalized`: como el login no pide empresa, no hay nada que registrar ahí. Un trabajo de limpieza borra las filas de más de 30 días — **es la única tabla del sistema con borrado físico**, porque no es un dato de negocio; queda anotada como excepción explícita al principio 4 de la constitución.
+Dos índices compuestos: `(username_normalized, attempted_at)` para CA-2.5 y `(client_ip, attempted_at)` para CA-2.6. Ya no lleva `company_normalized`: como el login no pide empresa, no hay nada que registrar ahí.
+
+**Implementación futura (fuera de esta feature):** un trabajo de limpieza que borre las filas de más de 30 días. Será **la única tabla del sistema con borrado físico**, porque no es un dato de negocio; queda anotada como excepción explícita al principio 4 de la constitución. No afecta a ningún criterio de aceptación: las ventanas de CA-2.5 y CA-2.6 solo miran los últimos 15 minutos.
+
+### `probe_items` (temporal, T016)
+
+Tabla de prueba para verificar el aislamiento antes de que existan entidades reales. **Se elimina en la spec 002 con una migración nueva**, junto con su endpoint.
+
+| Campo | Tipo | Nulo | Restricción |
+| --- | --- | --- | --- |
+| id | UUID | no | PK |
+| company_id | UUID | no | FK → `companies.id`, índice |
+| name | text | no | |
+| created_at | timestamptz | no | `now()` |
+| created_by | UUID | no | FK → `users.id` |
+| disabled_at | timestamptz | sí | `null` = activo |
+| disabled_by | UUID | sí | FK → `users.id` |
+
+Endpoints (solo para tests): `GET /api/v1/_probe` (listar), `GET /api/v1/_probe/{id}` (ver uno), `PATCH /api/v1/_probe/{id}` (cambiar `name`). Su migración va aparte de la inicial, para poder revertirla sola en la 002.
 
 ### Notas de esquema
 
@@ -153,6 +171,13 @@ Todas las rutas bajo `/api/v1`. Formato de error único:
 { "error": { "code": "INVALID_CREDENTIALS", "message": "...", "fields": {} } }
 ```
 
+Errores comunes a cualquier endpoint (añadidos en T008, 2026-09-19):
+
+| Código | Cuándo | Cuerpo |
+| --- | --- | --- |
+| 403 | operación que modifica estado sin token CSRF válido | `code: CSRF_FAILED` |
+| 404 | recurso inexistente **o de otra empresa**, indistinguibles (RN-9) | `code: NOT_FOUND`, mensaje siempre idéntico |
+
 ### `POST /api/v1/auth/register`
 
 ```json
@@ -164,6 +189,7 @@ Todas las rutas bajo `/api/v1`. Formato de error único:
 | 201 | creado, sesión iniciada | `{ "user": {...}, "company": {...} }` + cookies `session` y `csrf_token` |
 | 400 | campo vacío o contraseña inválida | `code: VALIDATION_ERROR`, `fields` con el detalle por campo |
 | 409 | nombre de empresa ya en uso | `code: COMPANY_NAME_TAKEN` |
+| 409 | nombre de usuario ya en uso en todo el sistema (RN-3; añadido en T008) | `code: USERNAME_TAKEN` |
 
 ### `POST /api/v1/auth/login`
 
@@ -247,4 +273,4 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 - [x] Cada criterio de aceptación aparece en la tabla de trazabilidad
 - [x] Los códigos de error están decididos, no implícitos
 - [x] Nada contradice la spec
-- [x] La excepción al principio 4 (borrado en `login_attempts`) está declarada explícitamente
+- [x] La excepción al principio 4 (borrado en `login_attempts`) está declarada explícitamente, como implementación futura
