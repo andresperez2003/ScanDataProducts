@@ -24,6 +24,23 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 | Datos en frontend | TanStack Query | El estado de servidor se gestiona en una capa, no con `useEffect` (constitución, convenciones de frontend) | `useEffect` a mano: prohibido por la constitución |
 | Tests | pytest + httpx.ASGITransport | Tests de integración contra la app real y Postgres real | TestClient síncrono: no ejercita el camino async |
 
+### Dependencias del frontend (añadidas el 2026-09-19, antes de T017)
+
+Justificación que exige la constitución (principio 6) para cada dependencia. Versiones fijadas en `frontend/package.json`.
+
+| Dependencia | Qué resuelve | Alternativa descartada |
+| --- | --- | --- |
+| `react` 18, `react-dom` 18, `@types/react` 18, `@types/react-dom` 18 | La UI. Versión 18 por decisión del usuario (fila "Frontend") | React 19: no es la versión decidida |
+| `vite` 8 + `@vitejs/plugin-react` | Servidor de desarrollo y build. Su proxy de `/api` al backend hace que frontend y API compartan origen en desarrollo | Create React App: abandonado; webpack a mano: configuración innecesaria |
+| `typescript` 6.0 | Modo estricto (constitución, Frontend) y `tsc --noEmit` | TypeScript 7: `typescript-eslint` aún no lo admite (exige < 6.1) |
+| `@tanstack/react-query` 5 | Estado del servidor (`GET /auth/me`) sin `useEffect` a mano (fila "Datos en frontend") | `useEffect` a mano: prohibido por la constitución |
+| `react-router-dom` 7 | Rutas `/login`, `/register` y protegidas; redirección a `/login` sin sesión (CA-3.4) | Navegación escrita a mano: reimplementa historial, redirecciones y rutas anidadas, con más código que probar |
+| `vitest` 5 + `jsdom` | `npm test` de T017–T019: comparte la configuración de Vite y simula el DOM | Jest: segunda configuración de transformación (TS/JSX) paralela a la de Vite |
+| `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event` | Probar componentes como los usa una persona (textos, etiquetas, clics, escritura) | Probar el estado interno de los componentes: acopla los tests a la implementación |
+| `eslint` 10 + `@eslint/js` + `typescript-eslint` + `eslint-plugin-react-hooks` | `npm run lint` (CLAUDE.md); reglas de hooks de React | Solo `tsc`: no detecta errores de uso de hooks |
+
+Sin MSW: el "servidor simulado" de T017 se hace sustituyendo `fetch` con `vi.fn()`, porque solo hay cuatro endpoints y no justifica otra dependencia. Sin `@testing-library/jest-dom`: las comprobaciones se hacen con los matchers estándar de Vitest.
+
 **Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. **Calibrado en T004 (2026-09-19):** con los de partida la verificación tardaba ~38 ms (16 núcleos); se fijan `time_cost=8`, `memory_cost=131072` (128 MiB), `parallelism=4`, que dan ~183 ms de mediana y ~200 ms de máximo. Se descartó 256 MiB con `time_cost=4` (mismo tiempo, el doble de memoria por inicio de sesión). Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
 
 ## 3. Estructura
@@ -250,6 +267,7 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 | `--autogenerate` no detecta índices parciales ni la FK diferida | Migración incompleta | Revisión manual obligatoria del archivo generado (T003) |
 | Normalización Unicode inconsistente | Dos empresas "iguales" coexisten | Normalizar con NFKC antes de `lower()`, en una única función compartida |
 | CSRF mal implementado con SPA en otro origen | Peticiones rechazadas o protección inútil | Test de integración que envía sin cabecera y espera 403 |
+| **Login CSRF (aceptado, 2026-09-19).** `register` y `login` no exigen token CSRF: la cookie `csrf_token` nace en su propia respuesta | Una web ajena puede hacer que el navegador de la víctima inicie sesión en la cuenta del **atacante**; lo que la víctima registre después quedaría en la empresa del atacante. No expone datos previos de la víctima | Aceptado por el usuario para esta feature. Mitigación futura: emitir `csrf_token` también desde `GET /auth/me` sin sesión y exigir el token en `register` y `login` (cambia el contrato de §5) |
 
 ## 8. Checklist de salida
 
