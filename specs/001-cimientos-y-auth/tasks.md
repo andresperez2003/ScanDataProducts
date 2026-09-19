@@ -68,10 +68,10 @@
 - [x] **T014** `core/deps.py`: `get_auth_context` como único origen del `company_id`. Routers `/api/v1/auth/*` con los cuatro endpoints de §5, cookies con sus flags, y verificación CSRF en las operaciones que modifican estado.
       · Verificación: `pytest tests/integration/test_auth_api.py` — cada endpoint con su código de éxito y **cada** código de error del contrato. Un test comprueba que `POST /auth/login` acepta solo `username` y `password`, y que enviar `company_name` en ese cuerpo no tiene efecto. Un test comprueba los flags de las cookies (`HttpOnly`, `SameSite`, y `Secure` según entorno). Un test envía un `company_id` en el cuerpo del registro y comprueba que se ignora (CA-4.3). Un test envía una petición de cierre de sesión sin cabecera CSRF y espera 403.
 
-- [ ] **T015** Logging estructurado con `request_id` y `company_id`, y filtro que redacta cualquier clave `password`.
+- [x] **T015** Logging estructurado con `request_id` y `company_id`, y filtro que redacta cualquier clave `password`.
       · Verificación: `pytest tests/integration/test_logging.py` — captura la salida de un registro exitoso y falla si la contraseña aparece en cualquier forma (CA-1.6). Un test comprueba que un error manejado se registra exactamente una vez.
 
-- [ ] **T016** Endpoint sonda temporal `/api/v1/_probe` sobre la tabla `probe_items` (plan §4: listar, ver uno, cambiar nombre; migración propia), para verificar el aislamiento antes de que existan features reales. Se elimina al cerrar la spec 002.
+- [x] **T016** Endpoint sonda temporal `/api/v1/_probe` sobre la tabla `probe_items` (plan §4: listar, ver uno, cambiar nombre; migración propia), para verificar el aislamiento antes de que existan features reales. Se elimina al cerrar la spec 002.
       · Verificación: `pytest tests/integration/test_isolation.py` — CA-4.1, CA-4.2 y CA-4.4: el usuario de B pide el recurso de A y recibe **404**, lista y recibe solo lo suyo, e intenta modificarlo y falla sin que el recurso de A cambie.
 
 ---

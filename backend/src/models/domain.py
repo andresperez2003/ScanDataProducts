@@ -53,3 +53,13 @@ class AuthContext:
     user_id: uuid.UUID
     company_id: uuid.UUID
     session_id: uuid.UUID
+
+
+@dataclass(frozen=True)
+class ProbeItemData:
+    """TEMPORAL (T016): se elimina con probe_items al cerrar la spec 002."""
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    name: str
+    disabled_at: datetime | None

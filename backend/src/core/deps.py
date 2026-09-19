@@ -9,6 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.csrf import CSRF_COOKIE_NAME, CSRF_HEADER_NAME, is_valid_csrf
 from src.core.db import get_db
 from src.core.errors import CsrfFailedError, NotAuthenticatedError
+from src.core.logging import bind_company
 from src.core.security import unsign_session_token
 from src.models.domain import AuthContext
 from src.services.sessions import resolve_session
@@ -30,7 +31,9 @@ async def get_auth_context(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuthContext:
     """Única forma de obtener el company_id: sale de la sesión, nunca del cliente."""
-    return await resolve_session(db, token, now=datetime.now(UTC))
+    context = await resolve_session(db, token, now=datetime.now(UTC))
+    bind_company(context.company_id)
+    return context
 
 
 def require_csrf(request: Request) -> None:
