@@ -35,7 +35,7 @@
 - [x] **T005** `[P]` `core/security.py`: generación de token de sesión de 32 bytes, su SHA-256, y firma y verificación con `itsdangerous`.
       · Verificación: `pytest tests/unit/test_tokens.py` — una firma manipulada se rechaza; dos tokens generados nunca coinciden; el hash es determinista.
 
-- [ ] **T006** `[P]` `core/csrf.py`: emisión de la cookie `csrf_token` y verificación double-submit.
+- [x] **T006** `[P]` `core/csrf.py`: emisión de la cookie `csrf_token` y verificación double-submit.
       · Verificación: `pytest tests/unit/test_csrf.py` — coincidencia de cookie y cabecera pasa; ausencia de cabecera, ausencia de cookie y valores distintos fallan.
 
 ### Bloque 3 — Acceso a datos
