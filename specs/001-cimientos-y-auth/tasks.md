@@ -93,7 +93,7 @@
 
 ## Cierre
 
-- [ ] **T020** Verificación de trazabilidad y de constitución.
+- [x] **T020** Verificación de trazabilidad y de constitución.
       · Verificación: todo criterio de aceptación de la spec tiene al menos un test que lo nombra; `pytest --cov=src --cov-fail-under=80` pasa; la revisión de constitución no reporta consultas sin `company_id`.
 
 ---

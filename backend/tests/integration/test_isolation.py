@@ -208,3 +208,19 @@ async def test_borde_modificar_sin_csrf_403(
 
 async def test_ca_3_4_sin_sesion_401(client: AsyncClient) -> None:
     assert (await client.get("/api/v1/_probe")).status_code == 401
+
+
+async def test_rn_8_la_empresa_sale_de_la_sesion_nunca_de_la_peticion(
+    db_session: AsyncSession, a: Empresa, b: Empresa
+) -> None:
+    await _item(db_session, b, "b1")
+    ajena = str(b.company_id)
+
+    # Cabecera, query y cuerpo intentan apuntar a la empresa B.
+    lista = await a.cliente.get(
+        "/api/v1/_probe", params={"company_id": ajena}, headers={"X-Company-Id": ajena}
+    )
+    yo = await a.cliente.get("/api/v1/auth/me", headers={"X-Company-Id": ajena})
+
+    assert lista.json() == {"items": []}
+    assert yo.json()["company"]["id"] == str(a.company_id)
