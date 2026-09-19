@@ -52,6 +52,30 @@ async def verify_password(password_hash: str, password: str) -> bool:
     return await asyncio.to_thread(_verify_sync, password_hash, password)
 
 
+@lru_cache
+def _decoy_hash() -> str:
+    """Hash señuelo de una contraseña aleatoria que nadie conoce (plan §5)."""
+    return _password_hasher().hash(secrets.token_urlsafe(32))
+
+
+def _verify_decoy_sync(password: str) -> None:
+    _verify_sync(_decoy_hash(), password)
+
+
+async def warm_decoy_hash() -> None:
+    """Genera el hash señuelo al arrancar, para que el primer login no tarde más."""
+    await asyncio.to_thread(_decoy_hash)
+
+
+async def verify_against_decoy(password: str) -> None:
+    """Gasta el mismo tiempo que una verificación real cuando el usuario no existe.
+
+    Sin esto, la diferencia de tiempo revela qué usuarios existen (CA-2.3).
+    """
+    # Mismo motivo que en hash_password: cálculo bloqueante fuera del event loop.
+    await asyncio.to_thread(_verify_decoy_sync, password)
+
+
 _SESSION_TOKEN_BYTES = 32
 
 

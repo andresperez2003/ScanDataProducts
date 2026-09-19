@@ -1,7 +1,8 @@
-"""Servicio de autenticación: registro (T009)."""
+"""Servicio de autenticación: registro (T009) e inicio de sesión (T011)."""
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -10,12 +11,19 @@ from src.core.errors import (
     DomainValidationError,
     DuplicateCompanyError,
     DuplicateUsernameError,
+    InvalidCredentialsError,
 )
-from src.core.security import hash_password, normalize_name
+from src.core.security import (
+    hash_password,
+    normalize_name,
+    verify_against_decoy,
+    verify_password,
+)
 from src.models.domain import CompanyData, UserData
 from src.repos.company import CompanyRepo
 from src.repos.user import UserRepo
 from src.services.password_policy import password_error
+from src.services.sessions import start_session
 
 REQUIRED_FIELD = "Campo obligatorio."
 
@@ -24,6 +32,14 @@ REQUIRED_FIELD = "Campo obligatorio."
 class AuthResult:
     user: UserData
     company: CompanyData
+
+
+@dataclass(frozen=True)
+class LoginResult:
+    user: UserData
+    company: CompanyData
+    # Token en claro: solo para la cookie de la respuesta, nunca se almacena.
+    session_token: str
 
 
 def _register_errors(company_name: str, username: str, password: str) -> dict[str, str]:
@@ -77,3 +93,26 @@ async def register(
 
     await db.commit()
     return AuthResult(user=user, company=company)
+
+
+async def login(
+    db: AsyncSession, *, username: str, password: str, now: datetime
+) -> LoginResult:
+    """Inicio de sesión solo con usuario y contraseña (RN-3, CA-2.1).
+
+    Cualquier fallo lanza el mismo InvalidCredentialsError (RN-6) y cuesta lo
+    mismo: si el usuario no existe se verifica contra el hash señuelo (CA-2.3).
+    """
+    user = await UserRepo(db).get_by_username(normalize_name(username))
+    if user is None:
+        await verify_against_decoy(password)
+        raise InvalidCredentialsError()
+    # Se verifica también al deshabilitado, para no distinguirlo por tiempo (CA-2.4).
+    valid = await verify_password(user.password_hash, password)
+    company = await CompanyRepo(db).get(user.company_id)
+    if not valid or user.disabled_at is not None or company is None:
+        raise InvalidCredentialsError()
+
+    token = await start_session(db, user, now=now)
+    await db.commit()
+    return LoginResult(user=user, company=company, session_token=token)

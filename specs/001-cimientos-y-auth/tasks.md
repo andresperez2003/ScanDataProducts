@@ -54,7 +54,7 @@
 - [x] **T010** Validador de contraseña de RN-4 (D-5): mínimo 12 caracteres; al menos una mayúscula, una minúscula, un número y un especial de `#$%&*_@`; ningún otro carácter.
       · Verificación: `pytest tests/unit/test_password_policy.py` — 11 caracteres válidos falla y 12 pasa; falla si falta mayúscula, minúscula, número o especial, indicando qué requisito incumple; falla con un espacio (también al inicio o al final), con `ñ` o letra acentuada, y con un símbolo fuera de la lista; una de 200 caracteres válidos pasa.
 
-- [ ] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
+- [x] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
       · Verificación: `pytest tests/integration/test_login.py` — cubre CA-2.1 a CA-2.4. Un test mide 20 intentos con usuario existente y 20 con inexistente y falla si las medianas difieren en más de 50 ms. Un test de dos empresas confirma que el usuario de la empresa A puede entrar sin mencionar ninguna empresa, y que el `company_id` de la sesión resultante es el correcto.
 
 - [ ] **T012** Rate limiting: dos ventanas deslizantes sobre `login_attempts` (por `username_normalized` y por `client_ip`, sin columna de empresa).
