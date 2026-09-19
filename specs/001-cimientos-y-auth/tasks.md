@@ -40,7 +40,7 @@
 
 ### Bloque 3 — Acceso a datos
 
-- [ ] **T007** Repositorios `company`, `user`, `session`, `login_attempt`. Toda función de negocio recibe `company_id` como **primer parámetro**.
+- [x] **T007** Repositorios `company`, `user`, `session`, `login_attempt`. Toda función de negocio recibe `company_id` como **primer parámetro**.
       · Verificación: `pytest tests/integration/test_repos.py` — cada método devuelve objetos de dominio, no filas de SQLModel; un test busca un usuario de la empresa A pasando el `company_id` de B y obtiene `None`. Además, un test lee el código fuente de `repos/` y falla si alguna función pública que consulta una tabla de negocio no tiene `company_id` como primer parámetro.
 
 ### Bloque 4 — Reglas de negocio
