@@ -1,7 +1,8 @@
-"""Servicio de autenticación: registro (T009)."""
+"""Servicio de autenticación: registro (T009), inicio de sesión (T011, T012)."""
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -10,12 +11,20 @@ from src.core.errors import (
     DomainValidationError,
     DuplicateCompanyError,
     DuplicateUsernameError,
+    InvalidCredentialsError,
 )
-from src.core.security import hash_password, normalize_name
+from src.core.security import (
+    hash_password,
+    normalize_name,
+    verify_against_decoy,
+    verify_password,
+)
 from src.models.domain import CompanyData, UserData
 from src.repos.company import CompanyRepo
 from src.repos.user import UserRepo
 from src.services.password_policy import password_error
+from src.services.rate_limit import ensure_not_blocked, record_attempt
+from src.services.sessions import start_session
 
 REQUIRED_FIELD = "Campo obligatorio."
 
@@ -24,6 +33,14 @@ REQUIRED_FIELD = "Campo obligatorio."
 class AuthResult:
     user: UserData
     company: CompanyData
+
+
+@dataclass(frozen=True)
+class LoginResult:
+    user: UserData
+    company: CompanyData
+    # Token en claro: solo para la cookie de la respuesta, nunca se almacena.
+    session_token: str
 
 
 def _register_errors(company_name: str, username: str, password: str) -> dict[str, str]:
@@ -77,3 +94,55 @@ async def register(
 
     await db.commit()
     return AuthResult(user=user, company=company)
+
+
+async def _authenticate(
+    db: AsyncSession, username_normalized: str, password: str
+) -> tuple[UserData, CompanyData] | None:
+    """Usuario y empresa si las credenciales son válidas; None en cualquier otro caso.
+
+    Cuesta lo mismo en todos los casos: si el usuario no existe se verifica
+    contra el hash señuelo (CA-2.3), y al deshabilitado también se le verifica
+    la contraseña (CA-2.4).
+    """
+    user = await UserRepo(db).get_by_username(username_normalized)
+    if user is None:
+        await verify_against_decoy(password)
+        return None
+    valid = await verify_password(user.password_hash, password)
+    company = await CompanyRepo(db).get(user.company_id)
+    if not valid or user.disabled_at is not None or company is None:
+        return None
+    return user, company
+
+
+async def login(
+    db: AsyncSession, *, username: str, password: str, client_ip: str, now: datetime
+) -> LoginResult:
+    """Inicio de sesión solo con usuario y contraseña (RN-3, CA-2.1).
+
+    Si el usuario o el origen están bloqueados, lanza TooManyAttemptsError sin
+    comprobar credenciales (CA-2.5, CA-2.6). Cualquier fallo de credenciales
+    lanza el mismo InvalidCredentialsError (RN-6) y queda registrado.
+    """
+    username_normalized = normalize_name(username)
+    await ensure_not_blocked(
+        db, username_normalized=username_normalized, client_ip=client_ip, now=now
+    )
+    autenticado = await _authenticate(db, username_normalized, password)
+    await record_attempt(
+        db,
+        username_normalized=username_normalized,
+        client_ip=client_ip,
+        succeeded=autenticado is not None,
+        now=now,
+    )
+    if autenticado is None:
+        # El fallo debe quedar guardado aunque la petición termine en error.
+        await db.commit()
+        raise InvalidCredentialsError()
+
+    user, company = autenticado
+    token = await start_session(db, user, now=now)
+    await db.commit()
+    return LoginResult(user=user, company=company, session_token=token)
