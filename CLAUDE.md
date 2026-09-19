@@ -51,4 +51,3 @@ El orden es spec → plan → tasks → código. Nunca se salta un paso.
 4. Una migración aplicada no se edita nunca; se añade otra.
 5. Función ≤ 50 líneas, archivo ≤ 500 (componentes React ≤ 200).
 
-<!-- Nota para mí: al cambiar la constitución, revisar que este eco siga coincidiendo. -->
