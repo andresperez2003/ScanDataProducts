@@ -57,7 +57,7 @@
 - [x] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
       · Verificación: `pytest tests/integration/test_login.py` — cubre CA-2.1 a CA-2.4. Un test mide 20 intentos con usuario existente y 20 con inexistente y falla si las medianas difieren en más de 50 ms. Un test de dos empresas confirma que el usuario de la empresa A puede entrar sin mencionar ninguna empresa, y que el `company_id` de la sesión resultante es el correcto.
 
-- [ ] **T012** Rate limiting: dos ventanas deslizantes sobre `login_attempts` (por `username_normalized` y por `client_ip`, sin columna de empresa).
+- [x] **T012** Rate limiting: dos ventanas deslizantes sobre `login_attempts` (por `username_normalized` y por `client_ip`, sin columna de empresa).
       · Verificación: `pytest tests/integration/test_rate_limit.py` — CA-2.5 (6.º intento del mismo usuario bloqueado con credenciales correctas) y CA-2.6 (21.º intento desde la misma IP repartido entre usuarios distintos). Un test comprueba que la respuesta 429 incluye `Retry-After`.
 
 - [ ] **T013** Ciclo de vida de la sesión: creación, renovación de `last_seen_at`, caducidad por inactividad (8h) y absoluta (**15 días**, D-3 revisada), revocación.

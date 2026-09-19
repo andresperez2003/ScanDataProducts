@@ -2,7 +2,7 @@
 
 import statistics
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlmodel import func, select
@@ -17,6 +17,7 @@ from src.services.auth import AuthResult, login, register
 
 _CONTRASENA = "Trazabilidad#2026"
 _AHORA = datetime(2026, 9, 19, 12, 0, tzinfo=UTC)
+_IP = "198.51.100.7"
 
 
 async def _registrar(db: AsyncSession, empresa: str, usuario: str) -> AuthResult:
@@ -34,7 +35,9 @@ async def _error_de_login(
     db: AsyncSession, usuario: str, contrasena: str
 ) -> DomainError:
     with pytest.raises(InvalidCredentialsError) as error:
-        await login(db, username=usuario, password=contrasena, now=_AHORA)
+        await login(
+            db, username=usuario, password=contrasena, client_ip=_IP, now=_AHORA
+        )
     return error.value
 
 
@@ -44,7 +47,7 @@ async def test_ca_2_1_login_correcto_sin_indicar_empresa(
     registrado = await _registrar(db_session, "Acme S.A.", "maria")
 
     resultado = await login(
-        db_session, username="maria", password=_CONTRASENA, now=_AHORA
+        db_session, username="maria", password=_CONTRASENA, client_ip=_IP, now=_AHORA
     )
 
     assert resultado.user.id == registrado.user.id
@@ -59,7 +62,11 @@ async def test_ca_2_1_la_sesion_creada_pertenece_a_la_empresa_del_usuario(
     await _registrar(db_session, "Empresa B", "usuario_b")
 
     resultado = await login(
-        db_session, username="usuario_a", password=_CONTRASENA, now=_AHORA
+        db_session,
+        username="usuario_a",
+        password=_CONTRASENA,
+        client_ip=_IP,
+        now=_AHORA,
     )
 
     sesion = await SessionRepo(db_session).get_active_by_token_hash(
@@ -79,7 +86,7 @@ async def test_borde_rn_3_login_con_el_usuario_en_otras_mayusculas(
     registrado = await _registrar(db_session, "Acme", "Maria")
 
     resultado = await login(
-        db_session, username="MARIA", password=_CONTRASENA, now=_AHORA
+        db_session, username="MARIA", password=_CONTRASENA, client_ip=_IP, now=_AHORA
     )
 
     assert resultado.user.id == registrado.user.id
@@ -134,12 +141,23 @@ async def test_rn_6_mensaje_identico(db_session: AsyncSession) -> None:
     assert len({(e.code, e.message, type(e)) for e in errores}) == 1
 
 
-async def _mediana_de_fallos(db: AsyncSession, usuario: str, veces: int) -> float:
+async def _mediana_de_fallos(
+    db: AsyncSession, usuario: str, veces: int, desde: datetime
+) -> float:
     tiempos = []
-    for _ in range(veces):
+    for i in range(veces):
+        # 4 minutos entre intentos: nunca caben 5 fallos en 15 minutos, así que
+        # el bloqueo de T012 no interviene en la medición.
+        momento = desde + timedelta(minutes=4 * i)
         inicio = time.perf_counter()
         with pytest.raises(InvalidCredentialsError):
-            await login(db, username=usuario, password="Incorrecta#2026", now=_AHORA)
+            await login(
+                db,
+                username=usuario,
+                password="Incorrecta#2026",
+                client_ip=_IP,
+                now=momento,
+            )
         tiempos.append(time.perf_counter() - inicio)
     return statistics.median(tiempos)
 
@@ -149,7 +167,9 @@ async def test_ca_2_3_usuario_inexistente_tarda_lo_mismo_que_uno_existente(
 ) -> None:
     await _registrar(db_session, "Acme", "maria")
 
-    existente = await _mediana_de_fallos(db_session, "maria", 20)
-    inexistente = await _mediana_de_fallos(db_session, "nadie", 20)
+    existente = await _mediana_de_fallos(db_session, "maria", 20, _AHORA)
+    inexistente = await _mediana_de_fallos(
+        db_session, "nadie", 20, _AHORA + timedelta(hours=2)
+    )
 
     assert abs(existente - inexistente) < 0.05
