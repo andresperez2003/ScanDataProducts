@@ -60,7 +60,7 @@
 - [x] **T012** Rate limiting: dos ventanas deslizantes sobre `login_attempts` (por `username_normalized` y por `client_ip`, sin columna de empresa).
       · Verificación: `pytest tests/integration/test_rate_limit.py` — CA-2.5 (6.º intento del mismo usuario bloqueado con credenciales correctas) y CA-2.6 (21.º intento desde la misma IP repartido entre usuarios distintos). Un test comprueba que la respuesta 429 incluye `Retry-After`.
 
-- [ ] **T013** Ciclo de vida de la sesión: creación, renovación de `last_seen_at`, caducidad por inactividad (8h) y absoluta (**15 días**, D-3 revisada), revocación.
+- [x] **T013** Ciclo de vida de la sesión: creación, renovación de `last_seen_at`, caducidad por inactividad (8h) y absoluta (**15 días**, D-3 revisada), revocación.
       · Verificación: `pytest tests/integration/test_session.py` — CA-3.1 a CA-3.3 y CA-3.5 (sesión de 15 días exactos con actividad constante igual se cierra), el caso borde de dos sesiones simultáneas en dispositivos distintos, la reutilización tras cierre de sesión, y un usuario deshabilitado cuya sesión deja de funcionar en la siguiente petición.
 
 ### Bloque 5 — API

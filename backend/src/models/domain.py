@@ -44,3 +44,12 @@ class LoginAttemptData:
     client_ip: str
     succeeded: bool
     attempted_at: datetime
+
+
+@dataclass(frozen=True)
+class AuthContext:
+    """Identidad de la petición autenticada. Único origen del company_id (RN-8)."""
+
+    user_id: uuid.UUID
+    company_id: uuid.UUID
+    session_id: uuid.UUID
