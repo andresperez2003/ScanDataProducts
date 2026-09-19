@@ -12,9 +12,8 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import src.repos
-from src.models.domain import CompanyData, LoginAttemptData, SessionData, UserData
+from src.models.domain import CompanyData, SessionData, UserData
 from src.repos.company import CompanyRepo
-from src.repos.login_attempt import LoginAttemptRepo
 from src.repos.session import SessionRepo
 from src.repos.user import UserRepo
 from tests.conftest import Tenant
@@ -231,68 +230,6 @@ async def test_ca_3_3_renovar_actividad_de_la_sesion(
     renovada = await repo.get_active_by_token_hash(b"c" * 32)
     assert renovada is not None
     assert renovada.last_seen_at == despues
-
-
-# --- login_attempts --------------------------------------------------------
-
-
-async def test_principio_3_registrar_intento_devuelve_objeto_de_dominio(
-    db_session: AsyncSession,
-) -> None:
-    intento = await LoginAttemptRepo(db_session).record(
-        username_normalized="maria", client_ip="10.0.0.1", succeeded=False, at=_AHORA
-    )
-
-    assert isinstance(intento, LoginAttemptData)
-    assert not isinstance(intento, SQLModel)
-    assert (intento.client_ip, intento.succeeded) == ("10.0.0.1", False)
-
-
-async def test_ca_2_5_intentos_recientes_por_usuario(
-    db_session: AsyncSession,
-) -> None:
-    repo = LoginAttemptRepo(db_session)
-    viejo = _AHORA - timedelta(minutes=20)
-    await repo.record(
-        username_normalized="maria", client_ip="10.0.0.1", succeeded=False, at=viejo
-    )
-    await repo.record(
-        username_normalized="maria", client_ip="10.0.0.1", succeeded=False, at=_AHORA
-    )
-    await repo.record(
-        username_normalized="otro", client_ip="10.0.0.1", succeeded=False, at=_AHORA
-    )
-
-    recientes = await repo.recent_by_username(
-        "maria", since=_AHORA - timedelta(minutes=15)
-    )
-
-    assert [(i.username_normalized, i.attempted_at) for i in recientes] == [
-        ("maria", _AHORA)
-    ]
-
-
-async def test_ca_2_6_intentos_recientes_por_origen(
-    db_session: AsyncSession,
-) -> None:
-    repo = LoginAttemptRepo(db_session)
-    antes = _AHORA - timedelta(minutes=1)
-    await repo.record(
-        username_normalized="ana", client_ip="10.0.0.9", succeeded=False, at=antes
-    )
-    await repo.record(
-        username_normalized="luis", client_ip="10.0.0.9", succeeded=False, at=_AHORA
-    )
-    await repo.record(
-        username_normalized="ana", client_ip="10.0.0.8", succeeded=False, at=_AHORA
-    )
-
-    recientes = await repo.recent_by_ip(
-        "10.0.0.9", since=_AHORA - timedelta(minutes=15)
-    )
-
-    # Ordenados del más antiguo al más reciente.
-    assert [i.username_normalized for i in recientes] == ["ana", "luis"]
 
 
 # --- inspección del código fuente -----------------------------------------

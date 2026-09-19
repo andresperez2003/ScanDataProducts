@@ -39,14 +39,6 @@ class SessionData:
 
 
 @dataclass(frozen=True)
-class LoginAttemptData:
-    username_normalized: str
-    client_ip: str
-    succeeded: bool
-    attempted_at: datetime
-
-
-@dataclass(frozen=True)
 class AuthContext:
     """Identidad de la petición autenticada. Único origen del company_id (RN-8)."""
 

@@ -13,7 +13,6 @@ from src.core.errors import (
     InvalidCredentialsError,
     NotAuthenticatedError,
     NotFoundError,
-    TooManyAttemptsError,
     http_status_for,
 )
 
@@ -46,7 +45,6 @@ def test_principio_5_codigos_y_estados_del_contrato() -> None:
         DomainValidationError: ("VALIDATION_ERROR", 400),
         DuplicateCompanyError: ("COMPANY_NAME_TAKEN", 409),
         InvalidCredentialsError: ("INVALID_CREDENTIALS", 401),
-        TooManyAttemptsError: ("TOO_MANY_ATTEMPTS", 429),
         NotAuthenticatedError: ("NOT_AUTHENTICATED", 401),
         DuplicateUsernameError: ("USERNAME_TAKEN", 409),
         NotFoundError: ("NOT_FOUND", 404),
@@ -59,7 +57,7 @@ def test_principio_5_codigos_y_estados_del_contrato() -> None:
 
 def test_principio_5_el_estado_se_obtiene_de_la_instancia() -> None:
     assert http_status_for(DuplicateCompanyError()) == 409
-    assert http_status_for(TooManyAttemptsError(retry_after_seconds=60)) == 429
+    assert http_status_for(NotFoundError()) == 404
 
 
 def test_rn_6_credenciales_invalidas_siempre_el_mismo_mensaje() -> None:
@@ -78,10 +76,6 @@ def test_ca_1_3_error_de_validacion_indica_los_campos() -> None:
     error = DomainValidationError({"company_name": "Campo obligatorio."})
 
     assert error.fields == {"company_name": "Campo obligatorio."}
-
-
-def test_ca_2_5_demasiados_intentos_indica_cuanto_esperar() -> None:
-    assert TooManyAttemptsError(retry_after_seconds=900).retry_after_seconds == 900
 
 
 def _modulos_que_importa(archivo: Path) -> set[str]:

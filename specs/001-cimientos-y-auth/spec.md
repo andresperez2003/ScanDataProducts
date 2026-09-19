@@ -1,7 +1,7 @@
 # Spec 001: Cimientos y autenticación
 
 **Estado:** aprobada
-**Fecha:** 2026-09-18 · decisiones de §8 cerradas el 2026-09-18 · revisada el 2026-09-18 (D-1 y D-3) · revisada el 2026-09-19 (D-5, RN-4)
+**Fecha:** 2026-09-18 · decisiones de §8 cerradas el 2026-09-18 · revisada el 2026-09-18 (D-1 y D-3) · revisada el 2026-09-19 (D-5, RN-4; D-4 retirada: sin bloqueo por intentos)
 
 > Aquí no se menciona ningún lenguaje, librería, tabla ni endpoint. Solo comportamiento
 > observable. Las decisiones técnicas (algoritmo de hash, formato de sesión, esquema de
@@ -27,6 +27,7 @@ con la garantía de que nunca verá ni podrá modificar datos de otra empresa.
 - Edición del perfil y cambio de contraseña (van en la spec 005).
 - Verificación de correo o cualquier dato de contacto.
 - Autenticación con terceros.
+- Bloqueo o limitación de intentos de inicio de sesión fallidos, por usuario o por origen (decisión del 2026-09-19, ver D-4).
 
 ## 4. Historias de usuario
 
@@ -55,8 +56,6 @@ datos de mi empresa, sin tener que recordar ni indicar el nombre de la empresa.
 - **CA-2.2** Dada una contraseña incorrecta, cuando intento entrar, entonces el acceso se rechaza con un mensaje que no revela si el usuario existe.
 - **CA-2.3** Dado un usuario que no existe, cuando intento entrar, entonces recibo exactamente el mismo mensaje y el mismo comportamiento observable que en CA-2.2, incluido el tiempo de respuesta.
 - **CA-2.4** Dado un usuario deshabilitado, cuando intento entrar con credenciales correctas, entonces el acceso se rechaza con el mismo mensaje genérico de CA-2.2.
-- **CA-2.5** Dadas 5 credenciales incorrectas consecutivas para el mismo usuario en menos de 15 minutos, cuando intento un sexto acceso, entonces se rechaza por exceso de intentos aunque las credenciales sean correctas, durante 15 minutos.
-- **CA-2.6** Dadas 20 credenciales incorrectas consecutivas desde el mismo origen en menos de 15 minutos, repartidas entre usuarios distintos, cuando intento un acceso más desde ese origen, entonces se rechaza por exceso de intentos durante 15 minutos.
 
 ### HU-3: Mantener y cerrar la sesión
 
@@ -129,7 +128,7 @@ puede ver ni modificar mis datos, y que yo no puedo ver los suyos.
 ## 8. Decisiones cerradas
 
 - [x] **D-1 — Ámbito del nombre de usuario. (revisada el 2026-09-18)** Único **en todo el sistema**, no por empresa. El nombre de empresa se pide solo en el registro, para identificar o crear la empresa; no es una credencial de acceso.
-  *Consecuencia:* el formulario de inicio de sesión pide dos campos: usuario y contraseña. El de registro sigue pidiendo tres: empresa, usuario y contraseña. Recogido en RN-3, CA-2.1 y CA-2.2 a CA-2.6.
+  *Consecuencia:* el formulario de inicio de sesión pide dos campos: usuario y contraseña. El de registro sigue pidiendo tres: empresa, usuario y contraseña. Recogido en RN-3, CA-2.1 y CA-2.2 a CA-2.4.
   *Motivo del cambio:* la primera versión ataba usuario a empresa para permitir nombres repetidos entre empresas (`admin` en dos empresas), pero complicaba el login sin necesidad real. Con usuario único global, el login es más simple y el nombre de empresa queda donde corresponde: en el registro, como dato de la empresa.
 
 - [x] **D-2 — Registro contra empresa existente.** Se rechaza. Permitir unirse escribiendo el nombre correcto dejaría entrar a cualquiera que lo conozca. **Confirmada sin cambios** al revisar D-1: seguir eligiendo esto explícitamente, y no una consecuencia accidental de otra decisión, es lo que la mantiene sostenible.
@@ -138,7 +137,9 @@ puede ver ni modificar mis datos, y que yo no puedo ver los suyos.
 - [x] **D-3 — Caducidad de sesión. (revisada el 2026-09-18)** Tope absoluto de **15 días** desde el inicio de sesión, sin importar la actividad — antes eran 30. El cierre por 8 horas de inactividad (CA-3.3) se mantiene sin cambios y sigue siendo, en la práctica, el límite que más se activa.
   *Consecuencia:* se añade CA-3.5 para dejarlo comprobable como criterio propio, separado de la inactividad.
 
-- [x] **D-4 — Bloqueo por intentos fallidos.** Por usuario **y** por origen de la petición. Solo por usuario, un atacante puede probar una contraseña común contra muchos usuarios sin activar ningún bloqueo. Recogido en CA-2.5 y CA-2.6.
+- [x] **D-4 — Bloqueo por intentos fallidos. (retirada el 2026-09-19)** Queda **fuera de alcance**: el sistema no bloquea ni limita los intentos de inicio de sesión fallidos, ni por usuario ni por origen. Se retiran CA-2.5 y CA-2.6 (sus números no se reutilizan).
+  *Consecuencia:* el inicio de sesión no depende de la IP del cliente ni guarda historial de intentos. La protección contra adivinación de contraseñas queda limitada al coste deliberado del hash (RN-4, §7) y a la política de contraseñas. Si se necesita más adelante, requiere su propia spec.
+  *Antes decía:* bloqueo de 15 minutos tras 5 fallos del mismo usuario o 20 desde el mismo origen.
 
 - [x] **D-5 — Composición de la contraseña. (2026-09-19)** Se sustituye el rechazo por lista de contraseñas comprometidas por reglas de composición: mayúscula, minúscula, número y un especial de la lista cerrada `#$%&*_@`, con un mínimo de 12 caracteres. Solo se admiten esos caracteres. Recogido en RN-4, CA-1.4 y §5.
   *Consecuencia:* ya no hace falta mantener una lista de contraseñas comprometidas. Espacios, letras acentuadas, `ñ` y cualquier otro símbolo se rechazan.

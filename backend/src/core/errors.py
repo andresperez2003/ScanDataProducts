@@ -55,17 +55,6 @@ class InvalidCredentialsError(DomainError):
         super().__init__()
 
 
-class TooManyAttemptsError(DomainError):
-    """CA-2.5, CA-2.6. `retry_after_seconds` alimenta la cabecera Retry-After."""
-
-    code = "TOO_MANY_ATTEMPTS"
-    default_message = "Demasiados intentos. Vuelve a intentarlo más tarde."
-
-    def __init__(self, *, retry_after_seconds: int) -> None:
-        super().__init__()
-        self.retry_after_seconds = retry_after_seconds
-
-
 class NotAuthenticatedError(DomainError):
     """Sin sesión, caducada, revocada o de un usuario deshabilitado (CA-3.2 a 3.5)."""
 
@@ -97,7 +86,6 @@ HTTP_STATUS: dict[type[DomainError], int] = {
     DuplicateCompanyError: HTTPStatus.CONFLICT,
     DuplicateUsernameError: HTTPStatus.CONFLICT,
     InvalidCredentialsError: HTTPStatus.UNAUTHORIZED,
-    TooManyAttemptsError: HTTPStatus.TOO_MANY_REQUESTS,
     NotAuthenticatedError: HTTPStatus.UNAUTHORIZED,
     NotFoundError: HTTPStatus.NOT_FOUND,
     CsrfFailedError: HTTPStatus.FORBIDDEN,

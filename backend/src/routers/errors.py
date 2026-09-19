@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse
 from src.core.errors import (
     DomainError,
     DomainValidationError,
-    TooManyAttemptsError,
     http_status_for,
 )
 from src.services.auth import REQUIRED_FIELD
@@ -27,15 +26,9 @@ def domain_error_response(error: DomainError) -> JSONResponse:
         "domain_error", code=error.code, status_code=status_code
     )
     fields = error.fields if isinstance(error, DomainValidationError) else {}
-    headers = (
-        {"Retry-After": str(error.retry_after_seconds)}
-        if isinstance(error, TooManyAttemptsError)
-        else None
-    )
     return JSONResponse(
         _body(error.code, error.message, fields),
         status_code=status_code,
-        headers=headers,
     )
 
 

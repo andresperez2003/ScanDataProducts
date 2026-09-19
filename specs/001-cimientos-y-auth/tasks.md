@@ -21,7 +21,7 @@
 
 ### Bloque 1 — Datos
 
-- [x] **T002** Modelos `Company`, `User`, `Session`, `LoginAttempt` según §4 del plan, y migración inicial de Alembic. Revisar a mano el archivo generado: `--autogenerate` no detecta el índice parcial de `sessions` ni la FK diferida de `companies.disabled_by`.
+- [x] **T002** Modelos `Company`, `User`, `Session` según §4 del plan, y migración inicial de Alembic. Revisar a mano el archivo generado: `--autogenerate` no detecta el índice parcial de `sessions` ni la FK diferida de `companies.disabled_by`.
       · Verificación: `alembic upgrade head`, `alembic downgrade base` y de nuevo `alembic upgrade head` corren sin error. Las comprobaciones de esquema con `pytest` quedan en T003, que es donde nacen las fixtures de base de datos.
 
 - [x] **T003** `core/db.py`: engine async, `sessionmaker`, dependencia `get_db`. Fixtures de pytest: sesión por test en transacción con rollback, y factoría que crea **dos empresas** con un usuario cada una.
@@ -40,7 +40,7 @@
 
 ### Bloque 3 — Acceso a datos
 
-- [x] **T007** Repositorios `company`, `user`, `session`, `login_attempt`. Toda función de negocio recibe `company_id` como **primer parámetro**.
+- [x] **T007** Repositorios `company`, `user`, `session`. Toda función de negocio recibe `company_id` como **primer parámetro**.
       · Verificación: `pytest tests/integration/test_repos.py` — cada método devuelve objetos de dominio, no filas de SQLModel; un test busca un usuario de la empresa A pasando el `company_id` de B y obtiene `None`. Además, un test lee el código fuente de `repos/` y falla si alguna función pública que consulta una tabla de negocio no tiene `company_id` como primer parámetro.
 
 ### Bloque 4 — Reglas de negocio
@@ -57,8 +57,10 @@
 - [x] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
       · Verificación: `pytest tests/integration/test_login.py` — cubre CA-2.1 a CA-2.4. Un test mide 20 intentos con usuario existente y 20 con inexistente y falla si las medianas difieren en más de 50 ms. Un test de dos empresas confirma que el usuario de la empresa A puede entrar sin mencionar ninguna empresa, y que el `company_id` de la sesión resultante es el correcto.
 
-- [x] **T012** Rate limiting: dos ventanas deslizantes sobre `login_attempts` (por `username_normalized` y por `client_ip`, sin columna de empresa).
-      · Verificación: `pytest tests/integration/test_rate_limit.py` — CA-2.5 (6.º intento del mismo usuario bloqueado con credenciales correctas) y CA-2.6 (21.º intento desde la misma IP repartido entre usuarios distintos). Un test comprueba que la respuesta 429 incluye `Retry-After`.
+- ~~**T012** Rate limiting~~ **Retirada (2026-09-19): el bloqueo por intentos fallidos queda fuera de alcance (spec D-4).** El número no se reutiliza, para no renumerar las demás tareas.
+
+- [x] **T012b** Retirar el bloqueo por intentos ya implementado (spec D-4, retirada el 2026-09-19): eliminar `services/rate_limit.py`, `repos/login_attempt.py`, `models/login_attempt.py`, `LoginAttemptData`, `TooManyAttemptsError` y la cabecera `Retry-After`; `login` deja de recibir `client_ip`. La tabla `login_attempts` se elimina con una **migración nueva** (la inicial no se edita).
+      · Verificación: `pytest` — un test de `test_schema.py` comprueba que `login_attempts` no existe; un test de `test_login.py` comprueba que tras 6 contraseñas incorrectas seguidas el acceso correcto funciona (D-4). `alembic upgrade head`, `alembic downgrade -1` y `alembic upgrade head` corren sin error.
 
 - [x] **T013** Ciclo de vida de la sesión: creación, renovación de `last_seen_at`, caducidad por inactividad (8h) y absoluta (**15 días**, D-3 revisada), revocación.
       · Verificación: `pytest tests/integration/test_session.py` — CA-3.1 a CA-3.3 y CA-3.5 (sesión de 15 días exactos con actividad constante igual se cierra), el caso borde de dos sesiones simultáneas en dispositivos distintos, la reutilización tras cierre de sesión, y un usuario deshabilitado cuya sesión deja de funcionar en la siguiente petición.
@@ -85,7 +87,7 @@
       · Verificación: `npm test` — sin sesión se redirige a `/login` (CA-3.4); con sesión se renderiza el contenido; el estado de carga no parpadea mostrando la pantalla de login antes de resolver.
 
 - [ ] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
-      · Verificación: `npm test` — el formulario de login envía exactamente usuario y contraseña, y no muestra ni pide el nombre de empresa; un 401 muestra el mensaje genérico sin revelar la causa; un 409 en registro señala el campo de empresa; un 429 muestra el tiempo de espera. `npx tsc --noEmit` y `npm run lint` pasan.
+      · Verificación: `npm test` — el formulario de login envía exactamente usuario y contraseña, y no muestra ni pide el nombre de empresa; un 401 muestra el mensaje genérico sin revelar la causa; un 409 en registro señala el campo de empresa. `npx tsc --noEmit` y `npm run lint` pasan.
 
 ---
 
@@ -104,7 +106,6 @@
 | CA-1.5 | T002, T003 | `test_schema.py::test_ca_1_5_sin_columna_de_texto_plano` |
 | CA-1.6 | T015 | `test_logging.py::test_ca_1_6_password_no_aparece_en_logs` |
 | CA-2.1 – CA-2.4 | T011 | `test_login.py` |
-| CA-2.5, CA-2.6 | T012 | `test_rate_limit.py` |
 | CA-3.1 – CA-3.3, CA-3.5 | T013 | `test_session.py` |
 | CA-3.4 | T018 | `AuthProvider.test.tsx` |
 | CA-4.1 – CA-4.4 | T007, T014, T016 | `test_isolation.py` |
