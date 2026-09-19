@@ -1,6 +1,10 @@
-import os
 import pytest
 from pydantic import ValidationError
+
+
+def _campos_con_error(error: ValidationError) -> set[str]:
+    """Nombres de los campos que Pydantic reporta como inválidos."""
+    return {str(e["loc"][0]) for e in error.errors()}
 
 
 def test_missing_session_secret_raises_error(monkeypatch):
@@ -21,10 +25,10 @@ def test_missing_session_secret_raises_error(monkeypatch):
     from src.core.config import Settings
 
     with pytest.raises(ValidationError) as exc_info:
-        Settings()
+        Settings(_env_file=None)
 
-    # Verificar que el error menciona SESSION_SECRET
-    assert "SESSION_SECRET" in str(exc_info.value)
+    # Verificar que el error señala el campo session_secret
+    assert _campos_con_error(exc_info.value) == {"session_secret"}
 
 
 def test_complete_env_loads_correctly(monkeypatch):
@@ -41,7 +45,7 @@ def test_complete_env_loads_correctly(monkeypatch):
 
     from src.core.config import Settings
 
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     assert settings.environment == "development"
     assert settings.database_url == "postgresql+asyncpg://user:pass@localhost/db"
@@ -68,6 +72,6 @@ def test_session_secret_minimum_length(monkeypatch):
     from src.core.config import Settings
 
     with pytest.raises(ValidationError) as exc_info:
-        Settings()
+        Settings(_env_file=None)
 
-    assert "SESSION_SECRET" in str(exc_info.value)
+    assert _campos_con_error(exc_info.value) == {"session_secret"}
