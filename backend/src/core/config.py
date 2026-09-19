@@ -19,9 +19,9 @@ class Settings(BaseSettings):
         min_length=32,
         description="Secreto para firmar cookies, mínimo 32 caracteres",
     )
-    argon2_time_cost: int = Field(default=3, ge=1, description="Argon2id time cost")
+    argon2_time_cost: int = Field(default=8, ge=1, description="Argon2id time cost")
     argon2_memory_cost: int = Field(
-        default=65536, ge=8, description="Argon2id memory cost en KiB"
+        default=131072, ge=8, description="Argon2id memory cost en KiB"
     )
     argon2_parallelism: int = Field(default=4, ge=1, description="Argon2id parallelism")
     session_timeout_hours: int = Field(
