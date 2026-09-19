@@ -24,13 +24,13 @@
 - [x] **T002** Modelos `Company`, `User`, `Session`, `LoginAttempt` según §4 del plan, y migración inicial de Alembic. Revisar a mano el archivo generado: `--autogenerate` no detecta el índice parcial de `sessions` ni la FK diferida de `companies.disabled_by`.
       · Verificación: `alembic upgrade head`, `alembic downgrade base` y de nuevo `alembic upgrade head` corren sin error. Las comprobaciones de esquema con `pytest` quedan en T003, que es donde nacen las fixtures de base de datos.
 
-- [ ] **T003** `core/db.py`: engine async, `sessionmaker`, dependencia `get_db`. Fixtures de pytest: sesión por test en transacción con rollback, y factoría que crea **dos empresas** con un usuario cada una.
+- [x] **T003** `core/db.py`: engine async, `sessionmaker`, dependencia `get_db`. Fixtures de pytest: sesión por test en transacción con rollback, y factoría que crea **dos empresas** con un usuario cada una.
       · Verificación: `pytest tests/integration/test_db_fixture.py tests/integration/test_schema.py` — un test inserta una empresa y otro comprueba que la tabla está vacía, demostrando que el rollback funciona. La factoría devuelve dos `company_id` distintos. `test_schema.py` consulta `pg_indexes` e `information_schema.table_constraints` y comprueba que existen: `UNIQUE(companies.name_normalized)`, `UNIQUE(users.username_normalized)` (global, D-1), el índice parcial de `sessions` y la FK diferida; y `test_ca_1_5_sin_columna_de_texto_plano` comprueba que `users` no tiene ninguna columna de contraseña salvo `password_hash`.
 
 ### Bloque 2 — Seguridad
 
 - [ ] **T004** `[P]` `core/security.py`: hash y verificación Argon2id, y la función de normalización NFKC + `lower` + colapso de espacios, compartida por búsqueda e inserción, y usada tanto para nombres de empresa como de usuario.
-      · Verificación: `pytest tests/unit/test_security.py` — una contraseña de 200 caracteres hashea y verifica; los espacios al inicio y al final se conservan; `"  Acme   S.A. "` y `"acme s.a."` normalizan igual; un test mide que la verificación tarda menos de 400 ms.
+      · Verificación: `pytest tests/unit/test_security.py` — una contraseña de 200 caracteres hashea y verifica; `"  Acme   S.A. "` y `"acme s.a."` normalizan igual; un test mide que la verificación tarda menos de 400 ms.
 
 - [ ] **T005** `[P]` `core/security.py`: generación de token de sesión de 32 bytes, su SHA-256, y firma y verificación con `itsdangerous`.
       · Verificación: `pytest tests/unit/test_tokens.py` — una firma manipulada se rechaza; dos tokens generados nunca coinciden; el hash es determinista.
@@ -51,8 +51,8 @@
 - [ ] **T009** `services/auth.register`: normaliza, crea empresa y usuario en una transacción, traduce `IntegrityError` a `DuplicateCompanyError`.
       · Verificación: `pytest tests/integration/test_register.py` — cubre CA-1.1 a CA-1.4 y los casos borde de mayúsculas y espacios. Un test lanza dos registros concurrentes con el mismo nombre y comprueba que uno recibe `DuplicateCompanyError` y el otro éxito, nunca un error interno.
 
-- [ ] **T010** Validador de contraseña de RN-4: mínimo 12 caracteres y rechazo de contraseñas comprometidas.
-      · Verificación: `pytest tests/unit/test_password_policy.py` — 11 caracteres falla, 12 pasa, `"contraseña123"` de la lista falla, una contraseña con espacios al borde se conserva íntegra.
+- [ ] **T010** Validador de contraseña de RN-4 (D-5): mínimo 12 caracteres; al menos una mayúscula, una minúscula, un número y un especial de `#$%&*_@`; ningún otro carácter.
+      · Verificación: `pytest tests/unit/test_password_policy.py` — 11 caracteres válidos falla y 12 pasa; falla si falta mayúscula, minúscula, número o especial, indicando qué requisito incumple; falla con un espacio (también al inicio o al final), con `ñ` o letra acentuada, y con un símbolo fuera de la lista; una de 200 caracteres válidos pasa.
 
 - [ ] **T011** `services/auth.login`: busca al usuario **solo por `username`, sin `company_id`** (única excepción del proyecto, ver plan.md §3), y verifica en tiempo constante con **hash señuelo** cuando no existe.
       · Verificación: `pytest tests/integration/test_login.py` — cubre CA-2.1 a CA-2.4. Un test mide 20 intentos con usuario existente y 20 con inexistente y falla si las medianas difieren en más de 50 ms. Un test de dos empresas confirma que el usuario de la empresa A puede entrar sin mencionar ninguna empresa, y que el `company_id` de la sesión resultante es el correcto.

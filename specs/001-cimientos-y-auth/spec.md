@@ -1,7 +1,7 @@
 # Spec 001: Cimientos y autenticación
 
 **Estado:** aprobada
-**Fecha:** 2026-09-18 · decisiones de §8 cerradas el 2026-09-18 · revisada el 2026-09-18 (D-1 y D-3)
+**Fecha:** 2026-09-18 · decisiones de §8 cerradas el 2026-09-18 · revisada el 2026-09-18 (D-1 y D-3) · revisada el 2026-09-19 (D-5, RN-4)
 
 > Aquí no se menciona ningún lenguaje, librería, tabla ni endpoint. Solo comportamiento
 > observable. Las decisiones técnicas (algoritmo de hash, formato de sesión, esquema de
@@ -89,8 +89,10 @@ puede ver ni modificar mis datos, y que yo no puedo ver los suyos.
 | Nombre de empresa que solo difiere en mayúsculas o espacios sobrantes (`Acme S.A.` vs `  acme s.a. `) | Se considera el mismo nombre: se rechaza como duplicado. El nombre se almacena tal como lo escribió el usuario. |
 | Nombre de usuario que solo difiere en mayúsculas | Se considera el mismo usuario: se rechaza como duplicado en todo el sistema. |
 | Dos registros simultáneos con el mismo nombre de empresa | Solo uno tiene éxito. El otro recibe el error de duplicado, no un error interno. |
-| Contraseña de 200 caracteres | Se acepta y funciona al iniciar sesión. |
-| Contraseña con espacios al inicio o al final | Se conserva tal cual, no se recorta. |
+| Contraseña de 200 caracteres que cumple RN-4 | Se acepta y funciona al iniciar sesión. |
+| Contraseña con un espacio en cualquier posición, incluidos inicio y final | Se rechaza (RN-4). No se recorta para hacerla válida. |
+| Contraseña con `ñ` o letra acentuada (`Contraseña#2026`) | Se rechaza (RN-4): esas letras no cuentan como permitidas. |
+| Contraseña con un símbolo fuera de la lista (`MiClave-2026#`) | Se rechaza (RN-4), aunque también contenga uno de la lista. |
 | Sesión usada después de cerrar sesión | Rechazada. No sirve reenviar la misma credencial de sesión. |
 | Dos sesiones abiertas del mismo usuario en dispositivos distintos | Ambas son válidas. Cerrar una no cierra la otra. |
 | Usuario deshabilitado con sesión activa | Su sesión deja de funcionar en la siguiente petición. |
@@ -101,7 +103,11 @@ puede ver ni modificar mis datos, y que yo no puedo ver los suyos.
 - **RN-1** Una empresa tiene uno o más usuarios. Un usuario pertenece a exactamente una empresa y esa pertenencia no cambia nunca.
 - **RN-2** El nombre de empresa es único en todo el sistema, comparado sin distinguir mayúsculas ni espacios sobrantes.
 - **RN-3** El nombre de usuario es único **en todo el sistema**, comparado sin distinguir mayúsculas. Dos usuarios de empresas distintas no pueden compartir nombre. En consecuencia, las credenciales de acceso son dos: nombre de usuario y contraseña. El nombre de la empresa se pide **solo en el registro**, para crear o identificar la empresa a la que ese usuario quedará asociado; no participa en el inicio de sesión.
-- **RN-4** Una contraseña válida tiene al menos 12 caracteres. No se exige composición de tipos de carácter: la longitud es el requisito. Se rechazan las contraseñas que aparezcan en listas públicas de contraseñas comprometidas.
+- **RN-4** Una contraseña válida cumple todos estos requisitos:
+  - tiene al menos 12 caracteres;
+  - contiene al menos una letra mayúscula (`A`–`Z`), una minúscula (`a`–`z`) y un número (`0`–`9`);
+  - contiene al menos un carácter especial de esta lista cerrada: `#` `$` `%` `&` `*` `_` `@`;
+  - no contiene ningún otro carácter: ni espacios, ni letras con acento o `ñ`, ni símbolos fuera de la lista anterior.
 - **RN-5** Las contraseñas nunca se almacenan, registran ni transmiten de forma que permita recuperarlas.
 - **RN-6** Todo mensaje de fallo de autenticación es idéntico, sin importar la causa.
 - **RN-7** Ni empresas ni usuarios se borran: se deshabilitan. Un usuario deshabilitado no puede iniciar sesión y sus sesiones activas dejan de ser válidas. Los registros que creó se conservan intactos, con su autoría.
@@ -133,6 +139,9 @@ puede ver ni modificar mis datos, y que yo no puedo ver los suyos.
   *Consecuencia:* se añade CA-3.5 para dejarlo comprobable como criterio propio, separado de la inactividad.
 
 - [x] **D-4 — Bloqueo por intentos fallidos.** Por usuario **y** por origen de la petición. Solo por usuario, un atacante puede probar una contraseña común contra muchos usuarios sin activar ningún bloqueo. Recogido en CA-2.5 y CA-2.6.
+
+- [x] **D-5 — Composición de la contraseña. (2026-09-19)** Se sustituye el rechazo por lista de contraseñas comprometidas por reglas de composición: mayúscula, minúscula, número y un especial de la lista cerrada `#$%&*_@`, con un mínimo de 12 caracteres. Solo se admiten esos caracteres. Recogido en RN-4, CA-1.4 y §5.
+  *Consecuencia:* ya no hace falta mantener una lista de contraseñas comprometidas. Espacios, letras acentuadas, `ñ` y cualquier otro símbolo se rechazan.
 
 > Sin preguntas abiertas. La spec está lista para `plan.md`.
 
