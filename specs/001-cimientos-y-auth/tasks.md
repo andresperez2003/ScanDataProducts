@@ -78,15 +78,20 @@
 
 ---
 
-## Fase B — Frontend
+## Fase B — Frontend (retirada el 2026-09-20)
 
-- [x] **T017** `lib/api/client.ts` y `lib/api/auth.ts`: `credentials: "include"`, lectura de la cookie `csrf_token` y envío en `X-CSRF-Token`, tipos derivados de los contratos de §5 del plan, traducción del formato de error a errores por campo.
+> Estas tres tareas se implementaron y commitearon (`e8e4d0b`…`e819740`). El
+> frontend se aplazó hasta cerrar el backend, así que su código se retiró junto
+> con la carpeta `frontend/`: sigue recuperable desde `e819740`. Se dejan aquí,
+> marcadas `[~]`, para que este documento siga reflejando lo que ocurrió.
+
+- [~] **T017** `lib/api/client.ts` y `lib/api/auth.ts`: `credentials: "include"`, lectura de la cookie `csrf_token` y envío en `X-CSRF-Token`, tipos derivados de los contratos de §5 del plan, traducción del formato de error a errores por campo.
       · Verificación: `npm test` — con servidor simulado, una respuesta 400 con `fields` produce errores por campo; una 401 produce el estado "no autenticado"; toda petición que modifica estado lleva la cabecera CSRF.
 
-- [x] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
+- [~] **T018** `[P]` `AuthProvider` y `ProtectedRoute` con TanStack Query sobre `GET /auth/me`.
       · Verificación: `npm test` — sin sesión se redirige a `/login` (CA-3.4); con sesión se renderiza el contenido; el estado de carga no parpadea mostrando la pantalla de login antes de resolver.
 
-- [x] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
+- [~] **T019** `[P]` Pantallas de inicio de sesión (**dos** campos: usuario y contraseña, sin empresa) y de registro (tres: empresa, usuario, contraseña), con los cuatro estados obligatorios: cargando, vacío, error y sin permiso.
       · Verificación: `npm test` — el formulario de login envía exactamente usuario y contraseña, y no muestra ni pide el nombre de empresa; un 401 muestra el mensaje genérico sin revelar la causa; un 409 en registro señala el campo de empresa. `npx tsc --noEmit` y `npm run lint` pasan.
 
 ---
@@ -107,7 +112,7 @@
 | CA-1.6 | T015 | `test_logging.py::test_ca_1_6_password_no_aparece_en_logs` |
 | CA-2.1 – CA-2.4 | T011 | `test_login.py` |
 | CA-3.1 – CA-3.3, CA-3.5 | T013 | `test_session.py` |
-| CA-3.4 | T018 | `AuthProvider.test.tsx` |
+| CA-3.4 | T014 | `test_auth_api.py::test_ca_3_4_me_sin_sesion_401` y los otros tres `test_ca_3_4_*` |
 | CA-4.1 – CA-4.4 | T007, T014, T016 | `test_isolation.py` |
 | RN-4 | T010 | `test_password_policy.py` |
 | RN-6 | T011 | `test_login.py::test_rn_6_mensaje_identico` |

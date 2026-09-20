@@ -14,9 +14,9 @@ from src.core.errors import (
     InvalidCredentialsError,
     NotAuthenticatedError,
 )
+from src.core.normalize import normalize_name
 from src.core.security import (
     hash_password,
-    normalize_name,
     verify_against_decoy,
     verify_password,
 )

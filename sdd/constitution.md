@@ -1,7 +1,7 @@
 # Constitución del proyecto — Trazabilidad de Lotes
 
 **Vigente desde:** 2026-09-18
-**Stack:** Python 3.14.7 · FastAPI · SQLModel · Alembic · PostgreSQL · React + Vite · pytest
+**Stack:** Python 3.14.7 · FastAPI · SQLModel · Alembic · PostgreSQL · pytest
 **Contexto:** proyecto nuevo, multi-tenant, desarrollo en solitario, arquitectura en capas.
 
 > Estas reglas no se negocian por feature. Si una estorba de verdad, se cambia aquí
@@ -36,7 +36,6 @@ Este es el principio más importante del proyecto. Una fuga de datos entre empre
 - `services/` y el dominio **no importan `fastapi`** ni nada de HTTP. Si un servicio necesita FastAPI, la responsabilidad está mal ubicada.
 - `repos/` devuelve objetos de dominio, no filas del ORM ni sesiones.
 - `routers/` no contiene lógica condicional de negocio: valida entrada, llama a un servicio, traduce la respuesta.
-- El frontend nunca replica una regla de negocio: la valida el backend y la UI solo refleja el resultado.
 
 ### 4. Datos
 
@@ -59,9 +58,9 @@ Este es el principio más importante del proyecto. Una fuga de datos entre empre
 
 ### 6. Tamaño, estilo y dependencias
 
-- `ruff check`, `ruff format --check` y `mypy --strict` pasan antes de cada commit (backend). `eslint` y `tsc --noEmit` en el frontend.
+- `ruff check`, `ruff format --check` y `mypy --strict` pasan antes de cada commit.
 - Función: máximo **50 líneas**. Archivo: máximo **500**. Al superarlo se extrae, no se silencia el linter.
-- Ningún `# type: ignore` ni `// @ts-ignore` sin un comentario que explique por qué.
+- Ningún `# type: ignore` sin un comentario que explique por qué.
 - Sin campos opcionales en los modelos salvo justificación escrita en `plan.md`.
 - Ninguna dependencia nueva entra sin estar justificada en `plan.md`: qué resuelve y qué alternativa se descartó.
 - Si hace falta una librería que no está declarada, **el trabajo se detiene y se pregunta**. No se instala por iniciativa propia.
@@ -84,8 +83,7 @@ Este es el principio más importante del proyecto. Una fuga de datos entre empre
 | **Async** | Endpoints, servicios y repositorios son `async`. Prohibido llamar código bloqueante dentro de una corrutina; si es inevitable, `run_in_threadpool` con comentario que lo justifique. |
 | **Versionado de API** | Todas las rutas bajo `/api/v1`. Romper un contrato publicado exige `/api/v2`; añadir un campo opcional no lo rompe. |
 | **Observabilidad** | Logging estructurado en JSON con `request_id` y `company_id` en cada petición. Todo error manejado se registra **una sola vez**, donde se traduce a HTTP. Prohibido `print`. |
-| **Fechas** | Todo instante se almacena en UTC con zona horaria explícita. Las fechas de vencimiento e ingreso son fechas sin hora (`date`), no instantes. La conversión a zona local ocurre solo en el frontend. |
-| **Frontend** | TypeScript en modo estricto. Ninguna llamada a la API fuera de `frontend/src/lib/api/`. El estado del servidor se gestiona con una capa de datos, no con `useEffect` a mano. Ningún componente supera 200 líneas. |
+| **Fechas** | Todo instante se almacena en UTC con zona horaria explícita. Las fechas de vencimiento e ingreso son fechas sin hora (`date`), no instantes. La API entrega y acepta instantes en UTC; convertirlos a zona local es cosa de quien los muestre. |
 
 ---
 
@@ -119,6 +117,7 @@ No corrijas nada todavía, solo lista.
 
 | Fecha | Cambio | Motivo |
 | --- | --- | --- |
+| 2026-09-20 | Retiradas las reglas de frontend y React del stack | El frontend se aplaza hasta cerrar el backend; sus reglas vuelven aquí cuando se retome (ver `sdd/frontend.md` en el historial de git) |
 | 2026-09-19 | Eliminado el límite de tareas por feature | Partir specs por número de tareas dejaba entregas sin valor usable (001-cimientos-y-auth tiene 20) |
 | 2026-09-19 | Python 3.12 → 3.14.7 | Versión instalada en la máquina de desarrollo |
 | 2026-09-18 | Límite de 15 tareas por fase, no global | Permitir features backend + frontend completos sin partir innecesariamente |

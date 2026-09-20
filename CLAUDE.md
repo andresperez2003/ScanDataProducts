@@ -1,7 +1,7 @@
 # Trazabilidad de Lotes
 
 Aplicación multi-tenant para registrar seguimientos de lote y fecha de vencimiento
-de productos por proveedor. Backend FastAPI + frontend React. Desarrollo dirigido por specs.
+de productos por proveedor. Backend FastAPI. Desarrollo dirigido por specs.
 
 ## Comandos
 
@@ -12,9 +12,7 @@ de productos por proveedor. Backend FastAPI + frontend React. Desarrollo dirigid
 - Tests: `cd backend && pytest`
 - Un test: `cd backend && pytest tests/integration/test_auth.py::test_nombre -q`
 - Cobertura: `cd backend && pytest --cov=src --cov-fail-under=80`
-- Lint y tipos backend: `cd backend && ruff check . && ruff format --check . && mypy --strict src`
-- Frontend: `cd frontend && npm run dev`
-- Lint y tipos frontend: `cd frontend && npm run lint && npx tsc --noEmit`
+- Lint y tipos: `cd backend && ruff check . && ruff format --check . && mypy --strict src`
 
 ## Estructura
 
@@ -23,11 +21,8 @@ de productos por proveedor. Backend FastAPI + frontend React. Desarrollo dirigid
 - `backend/src/repos/` — acceso a datos. Devuelve objetos de dominio.
 - `backend/src/models/` — entidades SQLModel y schemas Pydantic.
 - `backend/src/core/` — config, errores, sesión, dependencias.
-- `frontend/src/features/` — una carpeta por módulo (auth, products, suppliers, tracing, profile).
-- `frontend/src/lib/api/` — único lugar desde el que se llama a la API.
 - `specs/NNN-nombre/` — spec.md, plan.md y tasks.md de cada feature.
 - `sdd/constitution.md` — las reglas completas del proyecto.
-- `specs/README.md` — el mapa de features y su orden.
 
 ## Flujo de trabajo
 
@@ -49,5 +44,5 @@ El orden es spec → plan → tasks → código. Nunca se salta un paso.
    el histórico y las exportaciones incluyen todo.
 3. `HTTPException` solo en `backend/src/routers/`. Los servicios lanzan excepciones de dominio.
 4. Una migración aplicada no se edita nunca; se añade otra.
-5. Función ≤ 50 líneas, archivo ≤ 500 (componentes React ≤ 200).
+5. Función ≤ 50 líneas, archivo ≤ 500.
 

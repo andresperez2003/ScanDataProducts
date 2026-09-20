@@ -5,8 +5,9 @@ lee Alembic para generar migraciones.
 """
 
 from src.models.company import Company
-from src.models.probe_item import ProbeItem
+from src.models.product import Product
 from src.models.session import Session
+from src.models.supplier import Supplier
 from src.models.user import User
 
-__all__ = ["Company", "ProbeItem", "Session", "User"]
+__all__ = ["Company", "Product", "Session", "Supplier", "User"]

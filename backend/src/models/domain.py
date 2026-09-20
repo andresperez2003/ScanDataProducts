@@ -48,10 +48,30 @@ class AuthContext:
 
 
 @dataclass(frozen=True)
-class ProbeItemData:
-    """TEMPORAL (T016): se elimina con probe_items al cerrar la spec 002."""
+class SupplierData:
+    """Proveedor del catálogo de una empresa (002 HU-1)."""
 
     id: uuid.UUID
     company_id: uuid.UUID
     name: str
+    created_at: datetime
+    # None = activo. Lo necesita el servicio de productos para RN-4.
+    disabled_at: datetime | None
+
+
+@dataclass(frozen=True)
+class ProductData:
+    """Producto del catálogo de una empresa (002 HU-3).
+
+    El proveedor viene embebido y leído en la misma consulta, nunca copiado en
+    la fila del producto: así el listado siempre muestra su nombre actual (§7,
+    "consistencia"). `None` es un producto sin proveedor (D-1).
+    """
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    name: str
+    sku: str | None
+    supplier: SupplierData | None
+    created_at: datetime
     disabled_at: datetime | None
