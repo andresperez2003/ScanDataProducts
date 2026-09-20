@@ -9,6 +9,9 @@ from src.core.errors import (
     DomainError,
     DomainValidationError,
     DuplicateCompanyError,
+    DuplicateProductNameError,
+    DuplicateProductSkuError,
+    DuplicateSupplierNameError,
     DuplicateUsernameError,
     InvalidCredentialsError,
     NotAuthenticatedError,
@@ -53,6 +56,30 @@ def test_principio_5_codigos_y_estados_del_contrato() -> None:
 
     for clase, (codigo, estado) in esperados.items():
         assert (clase.code, HTTP_STATUS[clase]) == (codigo, estado)
+
+
+def test_002_codigos_y_estados_del_catalogo() -> None:
+    # 002 plan §5: los tres conflictos de unicidad del catálogo.
+    esperados: dict[type[DomainError], tuple[str, int]] = {
+        DuplicateSupplierNameError: ("SUPPLIER_NAME_TAKEN", 409),
+        DuplicateProductNameError: ("PRODUCT_NAME_TAKEN", 409),
+        DuplicateProductSkuError: ("PRODUCT_SKU_TAKEN", 409),
+    }
+
+    for clase, (codigo, estado) in esperados.items():
+        assert issubclass(clase, DomainError)
+        assert (clase.code, HTTP_STATUS[clase]) == (codigo, estado)
+
+
+def test_002_los_conflictos_de_catalogo_tienen_mensaje_propio() -> None:
+    # A diferencia de NotFoundError, aquí el mensaje sí puede decir qué pasó:
+    # el recurso en conflicto es de la propia empresa (RN-8 no aplica).
+    for clase in (
+        DuplicateSupplierNameError,
+        DuplicateProductNameError,
+        DuplicateProductSkuError,
+    ):
+        assert clase().message != ""
 
 
 def test_principio_5_el_estado_se_obtiene_de_la_instancia() -> None:

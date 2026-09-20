@@ -44,6 +44,27 @@ class DuplicateUsernameError(DomainError):
     default_message = "Ese nombre de usuario ya está en uso."
 
 
+class DuplicateSupplierNameError(DomainError):
+    """002 RN-1, CA-1.2, CA-1.5, CA-1.7: nombre en uso por un proveedor activo."""
+
+    code = "SUPPLIER_NAME_TAKEN"
+    default_message = "Ese nombre de proveedor ya está en uso."
+
+
+class DuplicateProductNameError(DomainError):
+    """002 RN-2, CA-3.2, CA-3.11: nombre en uso en ese proveedor (D-1, D-2)."""
+
+    code = "PRODUCT_NAME_TAKEN"
+    default_message = "Ese nombre de producto ya está en uso para ese proveedor."
+
+
+class DuplicateProductSkuError(DomainError):
+    """002 RN-3, CA-3.8, CA-3.11: código en uso en ese proveedor."""
+
+    code = "PRODUCT_SKU_TAKEN"
+    default_message = "Ese código ya está en uso para ese proveedor."
+
+
 class InvalidCredentialsError(DomainError):
     """Mensaje único sea cual sea la causa (RN-6, CA-2.2 a CA-2.4)."""
 
@@ -85,6 +106,9 @@ HTTP_STATUS: dict[type[DomainError], int] = {
     DomainValidationError: HTTPStatus.BAD_REQUEST,
     DuplicateCompanyError: HTTPStatus.CONFLICT,
     DuplicateUsernameError: HTTPStatus.CONFLICT,
+    DuplicateSupplierNameError: HTTPStatus.CONFLICT,
+    DuplicateProductNameError: HTTPStatus.CONFLICT,
+    DuplicateProductSkuError: HTTPStatus.CONFLICT,
     InvalidCredentialsError: HTTPStatus.UNAUTHORIZED,
     NotAuthenticatedError: HTTPStatus.UNAUTHORIZED,
     NotFoundError: HTTPStatus.NOT_FOUND,

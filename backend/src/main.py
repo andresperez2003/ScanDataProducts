@@ -10,7 +10,8 @@ from src.core.logging import RequestLoggingMiddleware, configure_logging
 from src.core.security import warm_decoy_hash
 from src.routers.auth import router as auth_router
 from src.routers.errors import register_error_handlers
-from src.routers.probe import router as probe_router
+from src.routers.products import router as products_router
+from src.routers.suppliers import router as suppliers_router
 
 
 @asynccontextmanager
@@ -39,8 +40,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     register_error_handlers(app)
     app.include_router(auth_router)
-    # TEMPORAL (T016): se retira al cerrar la spec 002.
-    app.include_router(probe_router)
+    app.include_router(suppliers_router)
+    app.include_router(products_router)
     return app
 
 

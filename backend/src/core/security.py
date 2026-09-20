@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 import secrets
-import unicodedata
 from functools import lru_cache
 
 from argon2 import PasswordHasher, Type
@@ -9,15 +8,6 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from itsdangerous import BadSignature, Signer
 
 from src.core.config import get_settings
-
-
-def normalize_name(value: str) -> str:
-    """Forma canónica de un nombre de empresa o de usuario (RN-2, RN-3).
-
-    NFKC + minúsculas + recorte y colapso de espacios. Es la única función que
-    decide si dos nombres son "el mismo": se usa igual al buscar y al insertar.
-    """
-    return " ".join(unicodedata.normalize("NFKC", value).lower().split())
 
 
 @lru_cache

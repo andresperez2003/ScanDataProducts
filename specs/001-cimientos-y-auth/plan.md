@@ -3,6 +3,10 @@
 **Spec de origen:** `specs/001-cimientos-y-auth/spec.md` (aprobada)
 **Fecha:** 2026-09-18 · revisado el 2026-09-18 tras corrección de D-1 y D-3 en la spec
 
+**Alcance revisado el 2026-09-20:** las decisiones, dependencias y estructura de
+frontend se retiraron al aplazarse el frontend hasta cerrar el backend. Lo que se
+llegó a implementar (T017–T019) sigue en git hasta `e819740`.
+
 ## 1. Enfoque en una frase
 
 Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnly`. El login busca al usuario **por su nombre, único en todo el sistema** y de ahí obtiene su empresa; a partir de ese momento, el `company_id` se resuelve siempre desde la sesión y se inyecta como dependencia obligatoria en cada endpoint.
@@ -20,26 +24,7 @@ Sesiones de servidor identificadas por un token opaco en cookie firmada `HttpOnl
 | Firma de cookie | `itsdangerous` | Firma HMAC de la cookie de sesión, sin almacenar el secreto en el cliente | JWT: estado en el cliente, revocación imposible sin lista negra — incompatible con CA-3.2 |
 | Sesión | Tabla en BD, token opaco de 32 bytes, guardado como SHA-256 | Revocable al instante (CA-3.2, RN-7) y un volcado de BD no permite suplantar sesiones | Sesión en cookie firmada sin estado: no se puede revocar |
 | CSRF | Double-submit cookie | Sin estado en servidor, encaja con SPA en otro origen | Token en sesión: obliga a una consulta extra por petición |
-| Frontend | React 18 + Vite + TypeScript | Decidido por el usuario | — |
-| Datos en frontend | TanStack Query | El estado de servidor se gestiona en una capa, no con `useEffect` (constitución, convenciones de frontend) | `useEffect` a mano: prohibido por la constitución |
 | Tests | pytest + httpx.ASGITransport | Tests de integración contra la app real y Postgres real | TestClient síncrono: no ejercita el camino async |
-
-### Dependencias del frontend (añadidas el 2026-09-19, antes de T017)
-
-Justificación que exige la constitución (principio 6) para cada dependencia. Versiones fijadas en `frontend/package.json`.
-
-| Dependencia | Qué resuelve | Alternativa descartada |
-| --- | --- | --- |
-| `react` 18, `react-dom` 18, `@types/react` 18, `@types/react-dom` 18 | La UI. Versión 18 por decisión del usuario (fila "Frontend") | React 19: no es la versión decidida |
-| `vite` 8 + `@vitejs/plugin-react` | Servidor de desarrollo y build. Su proxy de `/api` al backend hace que frontend y API compartan origen en desarrollo | Create React App: abandonado; webpack a mano: configuración innecesaria |
-| `typescript` 6.0 | Modo estricto (constitución, Frontend) y `tsc --noEmit` | TypeScript 7: `typescript-eslint` aún no lo admite (exige < 6.1) |
-| `@tanstack/react-query` 5 | Estado del servidor (`GET /auth/me`) sin `useEffect` a mano (fila "Datos en frontend") | `useEffect` a mano: prohibido por la constitución |
-| `react-router-dom` 7 | Rutas `/login`, `/register` y protegidas; redirección a `/login` sin sesión (CA-3.4) | Navegación escrita a mano: reimplementa historial, redirecciones y rutas anidadas, con más código que probar |
-| `vitest` 5 + `jsdom` | `npm test` de T017–T019: comparte la configuración de Vite y simula el DOM | Jest: segunda configuración de transformación (TS/JSX) paralela a la de Vite |
-| `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event` | Probar componentes como los usa una persona (textos, etiquetas, clics, escritura) | Probar el estado interno de los componentes: acopla los tests a la implementación |
-| `eslint` 10 + `@eslint/js` + `typescript-eslint` + `eslint-plugin-react-hooks` | `npm run lint` (CLAUDE.md); reglas de hooks de React | Solo `tsc`: no detecta errores de uso de hooks |
-
-Sin MSW: el "servidor simulado" de T017 se hace sustituyendo `fetch` con `vi.fn()`, porque solo hay cuatro endpoints y no justifica otra dependencia. Sin `@testing-library/jest-dom`: las comprobaciones se hacen con los matchers estándar de Vitest.
 
 **Coste de Argon2id.** Los parámetros se calibran en T004 para que la verificación tarde entre 150 ms y 300 ms en la máquina de desarrollo. Valores de partida: `time_cost=3`, `memory_cost=65536` (64 MiB), `parallelism=4`. **Calibrado en T004 (2026-09-19):** con los de partida la verificación tardaba ~38 ms (16 núcleos); se fijan `time_cost=8`, `memory_cost=131072` (128 MiB), `parallelism=4`, que dan ~183 ms de mediana y ~200 ms de máximo. Se descartó 256 MiB con `time_cost=4` (mismo tiempo, el doble de memoria por inicio de sesión). Es el único punto donde §7 ("login < 1 s en p95") puede incumplirse.
 
@@ -82,15 +67,6 @@ backend/
       ├─ test_login.py  test_session.py
       ├─ test_auth_api.py  test_logging.py  test_isolation.py
 
-frontend/src/
-├─ lib/api/
-│  ├─ client.ts             # fetch con credentials:"include" + cabecera CSRF
-│  └─ auth.ts               # register, login, logout, me
-├─ features/auth/
-│  ├─ LoginPage.tsx  RegisterPage.tsx
-│  ├─ AuthProvider.tsx      # sesión actual, estados de carga
-│  └─ ProtectedRoute.tsx
-└─ App.tsx                  # rutas
 ```
 
 > **Qué faltaba en la versión anterior:** la carpeta `alembic/` (las migraciones ya se mencionaban en el plan y en T003, pero no aparecían en el árbol) y `tests/`, que existe desde T002 pero no estaba dibujada. También se corrige que `repos/` tenía la rama del árbol mal cerrada.
@@ -227,7 +203,7 @@ Requiere sesión y token CSRF. `204` siempre que la sesión sea válida; marca `
 | Cookie | Flags | Contenido |
 | --- | --- | --- |
 | `session` | `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/` | token de 32 bytes firmado con `itsdangerous` |
-| `csrf_token` | `Secure`, `SameSite=Lax`, **sin** `HttpOnly` | valor aleatorio que el frontend copia a la cabecera `X-CSRF-Token` |
+| `csrf_token` | `Secure`, `SameSite=Lax`, **sin** `HttpOnly` | valor aleatorio que el cliente copia a la cabecera `X-CSRF-Token` |
 
 `Secure` se desactiva solo cuando `ENVIRONMENT=development`, para poder trabajar en `http://localhost`.
 
@@ -254,7 +230,7 @@ Es la única forma de obtener el `company_id`. Ningún schema de entrada de ning
 | CA-3.2 | `revoked_at` + índice parcial |
 | CA-3.3 | `last_seen_at` (inactividad de 8h) |
 | CA-3.5 | `absolute_expires_at` = `created_at + 15 días` |
-| CA-3.4 | `ProtectedRoute` en frontend + 401 del backend |
+| CA-3.4 | 401 del backend en toda ruta protegida (`test_ca_3_4_*`) |
 | CA-4.1 a CA-4.4 | `get_auth_context` + `company_id` obligatorio en repos; endpoint sonda de test |
 | RN-1 a RN-9 | ver §4 y §5 |
 
